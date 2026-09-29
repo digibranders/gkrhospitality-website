@@ -146,8 +146,8 @@ export class ReportValidationError extends Error {
  * of the finished PDF, which is the final guard.
  */
 const FIGURE_COUNT = 4;
-const MAX_IMPROVEMENTS = 6;
-const MAX_TABLE_ROWS = 8;
+const MAX_IMPROVEMENTS = 4;
+const MAX_TABLE_ROWS = 5;
 const MAX_ATTENTION = 3;
 const MAX_NEXT_MONTH = 5;
 const CARE_AREA_COUNT = 6;
