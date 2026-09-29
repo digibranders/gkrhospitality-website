@@ -40,7 +40,7 @@ import type { Indexing } from "./search-console.ts";
 const ROOT = fileURLToPath(new URL(".", import.meta.url));
 const PERIOD = /^\d{4}-\d{2}$/;
 /** Rows shown in each table on page 2. */
-const TABLE_ROWS = 8;
+const TABLE_ROWS = 5;
 /** Fetch more rows than we show: www and non-www URLs are merged, and zero-click rows are dropped. */
 const PAGE_ROWS = 50;
 const QUERY_ROWS = 25;

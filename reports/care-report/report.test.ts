@@ -175,8 +175,8 @@ describe("parseMonth", () => {
   it("accepts a two-page month and the committed September 2026 month", () => {
     expect(parseMonth(month(), config).improvements).toHaveLength(4);
     const september = parseMonth(readJson("./months/2026-09.json"), config);
-    expect(september.improvements).toHaveLength(6);
-    expect(september.operations.deployments).toEqual({ succeeded: 4, total: 4 });
+    expect(september.improvements).toHaveLength(4);
+    expect(september.operations.deployments).toEqual({ succeeded: 5, total: 5 });
   });
 
   it("rejects em-dashes and en-dashes anywhere in the copy", () => {
@@ -200,14 +200,14 @@ describe("parseMonth", () => {
     expect(problemsOf(() => parseMonth(data, config)).join("\n")).toMatch(/improvements\[1\]\.area.*"Design"/);
   });
 
-  it("allows between one and six improvements", () => {
+  it("allows between one and four improvements", () => {
     const none = month();
     none.improvements = [];
-    expect(problemsOf(() => parseMonth(none, config)).join("\n")).toMatch(/improvements.*1 to 6/);
-    const seven = month();
-    const item = (seven.improvements as unknown[])[0];
-    seven.improvements = Array.from({ length: 7 }, () => item);
-    expect(problemsOf(() => parseMonth(seven, config)).join("\n")).toMatch(/improvements.*1 to 6/);
+    expect(problemsOf(() => parseMonth(none, config)).join("\n")).toMatch(/improvements.*1 to 4/);
+    const five = month();
+    const item = (five.improvements as unknown[])[0];
+    five.improvements = Array.from({ length: 5 }, () => item);
+    expect(problemsOf(() => parseMonth(five, config)).join("\n")).toMatch(/improvements.*1 to 4/);
   });
 
   it("requires next month's plan and sane Vercel figures", () => {
@@ -260,17 +260,17 @@ describe("parseSearch, parseAnalytics and parseHealth", () => {
 
   it("reject search data from a different month, impossible numbers and too many rows", () => {
     const base = testSearch();
-    const nine = Array.from({ length: 9 }, (_, i) => ({ query: `query ${i}`, clicks: 0, impressions: 1, position: 3 }));
+    const six = Array.from({ length: 6 }, (_, i) => ({ query: `query ${i}`, clicks: 0, impressions: 1, position: 3 }));
     const data = {
       ...base,
       period: "2026-07",
-      performance: { ...base.performance, totals: { clicks: 90, impressions: 12, position: 3 }, queries: nine },
+      performance: { ...base.performance, totals: { clicks: 90, impressions: 12, position: 3 }, queries: six },
       indexing: { ...base.indexing, pagesIndexed: 11 },
     };
     const problems = problemsOf(() => parseSearch(data, "2026-08")).join("\n");
     expect(problems).toMatch(/period.*2026-07/);
     expect(problems).toMatch(/more clicks than impressions/);
-    expect(problems).toMatch(/performance\.queries.*at most 8/);
+    expect(problems).toMatch(/performance\.queries.*at most 5/);
     expect(problems).toMatch(/pagesIndexed plus notIndexed must equal pagesChecked/);
   });
 

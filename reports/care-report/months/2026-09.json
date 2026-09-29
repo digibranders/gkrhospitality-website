@@ -57,16 +57,6 @@
       "area": "Software updates",
       "title": "Packages updated and trimmed",
       "body": "Next.js and React were updated, and 46 unused packages were removed."
-    },
-    {
-      "area": "Website health",
-      "title": "Images made 89% lighter",
-      "body": "Gallery photos open at a fraction of their old size, and the homepage loads less."
-    },
-    {
-      "area": "Monitoring",
-      "title": "Visitor analytics on every page",
-      "body": "Google Analytics now records every visit, so this report shows real visitor numbers."
     }
   ],
   "operations": {

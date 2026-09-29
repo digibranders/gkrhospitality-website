@@ -296,6 +296,15 @@
     color: var(--muted);
   }
 
+  /*
+   * Page 1 holds between one and four improvements, with or without the
+   * attention box, so its height varies. Auto margins share the spare height
+   * between the sections and the footer instead of pooling it above the footer.
+   */
+  .page:not(.page--detail) > .changes,
+  .page:not(.page--detail) > .search,
+  .page:not(.page--detail) > .attention { margin-top: auto; }
+
   /* ---------- Search results ---------- */
   .search {
     padding-bottom: 13px;

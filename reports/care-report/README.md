@@ -42,7 +42,7 @@ Needs Node 23.6 or later (it runs the TypeScript directly) and Google Chrome. Se
 | `summary` | One or two sentences on what changed this month. | 140 characters, and must fit on 2 lines |
 | `figures` | Exactly 4 key numbers. `value` is the number, `unit` is optional (like `%`), `label` is 1 or 2 short lines. | 5 characters per value, 20 per label line |
 | `improvementsNote` | The short line under "What we improved in ...". | 110 characters |
-| `improvements` | 1 to 6 changes. `area` must be one of the six care areas in `config.json`. | Title 36 (1 line), body 84 characters (2 lines) |
+| `improvements` | 1 to 4 changes. `area` must be one of the six care areas in `config.json`. | Title 36 (1 line), body 84 characters (2 lines) |
 | `operations` | From Vercel: `deployments` (`succeeded`, `total`) this month, and `runtimeErrors` (`count` over the last `days`). Shown as site health tiles on page 2. | |
 | `attention` | 0 to 3 extra items for "Needs your attention", each a `title` and `detail`. The health check adds its own (see below), so this is usually `[]`. | Title 60, detail 140 characters |
 | `nextMonth` | 1 to 5 planned items for next month, shown as "Coming in ...". Confirm them with the client before sending. | 72 characters (1 line) each |
@@ -55,8 +55,8 @@ Needs Node 23.6 or later (it runs the TypeScript directly) and Google Chrome. Se
 - **Impressions and clicks** for the whole month, with the change against the previous month ("Up 19% on July").
 - **Click rate and average position** for the month, and times shown on desktop and mobile.
 - **Times shown and clicks per day**, drawn as two daily charts.
-- **What people searched**, top 8 by times shown, with clicks and average position. Google leaves rare searches out for privacy, so the report says how many of the month's clicks the listed searches cover. Long searches are shortened in the middle ("hospitalit…new york") so similar ones stay distinguishable.
-- **Pages Google showed**, top 8. www and non-www addresses for the same page are counted together, and paths are shown by the names in `config.json` (`"/services": "Services"`). A page missing from that list shows as its path; add it to `pageNames` when the site gets a new page.
+- **What people searched**, top 5 by times shown, with clicks and average position. Google leaves rare searches out for privacy, so the report says how many of the month's clicks the listed searches cover. Long searches are shortened in the middle ("hospitalit…new york") so similar ones stay distinguishable.
+- **Pages Google showed**, top 5. www and non-www addresses for the same page are counted together, and paths are shown by the names in `config.json` (`"/services": "Services"`). A page missing from that list shows as its path; add it to `pageNames` when the site gets a new page.
 
 It reads the `https://www.gkrhospitality.com/` property. Every other address (non-www, the old gkrhospitalityconsulting.com domains) redirects to www, so this is where all search traffic is recorded. The `sc-domain:gkrhospitality.com` Domain property also exists but was only added on 29 September 2026 and had not loaded its history yet; the www property had.
 
