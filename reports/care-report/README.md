@@ -36,7 +36,7 @@ Needs Node 23.6 or later (it runs the TypeScript directly) and Google Chrome. Se
 |---|---|---|
 | `period` | Reporting month, `YYYY-MM`. Must match the file name. | |
 | `issued` | Date the report is issued, `YYYY-MM-DD`. | Not before the reporting month |
-| `nextReport` | Date of the next report, `YYYY-MM-DD`. | After `issued` |
+| `nextReport` | Date of the next report, `YYYY-MM-DD`. Kept as a record; not printed. | After `issued` |
 | `headline` | The verdict at the top of the page. | 46 characters (2 lines) |
 | `headlineEmphasis` | The word in the headline set in copper, usually the status. | Must appear in `headline` |
 | `summary` | One or two sentences on what changed this month. | 140 characters, and must fit on 2 lines |

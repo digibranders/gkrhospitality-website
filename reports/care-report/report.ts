@@ -1216,7 +1216,6 @@ export function renderReport(
     agencyName: escapeHtml(config.agency.name),
     agencyDomain: escapeHtml(config.agency.domain),
     serviceName: escapeHtml(config.agency.serviceName),
-    nextReportDate: escapeHtml(formatDate(month.nextReport)),
   };
 
   const used: string[] = [];
