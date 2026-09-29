@@ -1,11 +1,34 @@
 {
   "source": "Google Search Console",
-  "property": "sc-domain:gkrhospitality.com",
+  "property": "https://www.gkrhospitality.com/",
   "period": "2026-09",
-  "fetchedAt": "2026-09-29T07:00:49.936Z",
-  "performance": null,
+  "fetchedAt": "2026-09-29T08:14:35.845Z",
+  "performance": {
+    "throughDate": "2026-09-26",
+    "totals": {
+      "clicks": 24,
+      "impressions": 117
+    },
+    "previousTotals": null,
+    "topPages": [
+      {
+        "path": "/about",
+        "clicks": 13
+      },
+      {
+        "path": "/",
+        "clicks": 11
+      }
+    ],
+    "topQueries": [
+      {
+        "query": "garrett ronan",
+        "clicks": 4
+      }
+    ]
+  },
   "indexing": {
-    "checkedAt": "2026-09-29T07:00:49.934Z",
+    "checkedAt": "2026-09-29T08:14:35.844Z",
     "pagesChecked": 10,
     "pagesIndexed": 10,
     "notIndexed": []

@@ -2,6 +2,7 @@
  * Pulls one month of Google Search data into months/<period>.search.json.
  *
  *   npm run report:search -- 2026-08                   full month, from the 3rd of the next month
+ *   npm run report:search -- 2026-09 --partial         the month so far, up to Google's latest final day
  *   npm run report:search -- 2026-09 --indexing-only   indexing now, search numbers marked pending
  *
  * Signs in as a read-only service account (key in .secrets/, see README.md).
@@ -10,26 +11,24 @@
  * previous month's totals, and the top pages and queries by clicks. The month
  * file you write by hand is never touched.
  *
- * Set GSC_KEY_FILE to use a key stored somewhere else.
+ * The service account key is read by google-client.ts.
  */
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseConfig, parseSearch } from "./report.ts";
 import type { SearchPerformance, SearchReport } from "./report.ts";
+import { SCOPES } from "./google-auth.ts";
+import { accessToken } from "./google-client.ts";
+import { isMonthComplete, monthRange, previousPeriod, yesterday } from "./periods.ts";
 import {
+  FINAL_DATA_LAG_DAYS,
   SearchConsoleError,
-  TOKEN_URL,
   URL_INSPECTION_ENDPOINT,
-  createServiceAccountJwt,
   indexingFromInspections,
-  isMonthComplete,
-  monthRange,
-  parseServiceAccountKey,
-  previousPeriod,
+  lastDataDate,
   searchAnalyticsEndpoint,
   sitemapPaths,
-  tokenRequestBody,
   topPagesFromRows,
   topQueriesFromRows,
   totalsFromResponse,
@@ -37,39 +36,16 @@ import {
 import type { Indexing } from "./search-console.ts";
 
 const ROOT = fileURLToPath(new URL(".", import.meta.url));
-const KEY_FILE = process.env.GSC_KEY_FILE ?? join(ROOT, ".secrets", "search-console-key.json");
 const PERIOD = /^\d{4}-\d{2}$/;
 const TOP_N = 5;
 /** Fetch more rows than we show: www and non-www URLs are merged, and zero-click rows are dropped. */
 const PAGE_ROWS = 50;
 const QUERY_ROWS = 25;
 
-type Dimension = "page" | "query";
+type Dimension = "page" | "query" | "date";
 
 function display(path: string): string {
   return relative(process.cwd(), path);
-}
-
-async function accessToken(): Promise<string> {
-  if (!existsSync(KEY_FILE)) {
-    throw new SearchConsoleError(
-      `No service account key at ${display(KEY_FILE)}. See "Search Console access" in reports/care-report/README.md.`,
-    );
-  }
-  const key = parseServiceAccountKey(JSON.parse(readFileSync(KEY_FILE, "utf8")));
-  const response = await fetch(TOKEN_URL, {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: tokenRequestBody(createServiceAccountJwt(key, Math.floor(Date.now() / 1000))),
-  });
-  const body = (await response.json()) as { access_token?: string; error_description?: string; error?: string };
-  if (!response.ok || !body.access_token) {
-    throw new SearchConsoleError(
-      `Google refused the service account sign-in (${response.status}): ${body.error_description ?? body.error ?? "no details"}. ` +
-        "If the key was deleted in Google Cloud, create a new one.",
-    );
-  }
-  return body.access_token;
 }
 
 async function query(
@@ -127,20 +103,29 @@ async function checkIndexing(token: string, property: string, sitemapUrl: string
   return indexingFromInspections(results, new Date().toISOString());
 }
 
-async function fetchPerformance(token: string, property: string, period: string): Promise<SearchPerformance> {
-  if (!isMonthComplete(period, new Date())) {
-    const { endDate } = monthRange(period);
+async function fetchPerformance(
+  token: string,
+  property: string,
+  period: string,
+  partial: boolean,
+): Promise<SearchPerformance> {
+  const month = monthRange(period);
+  const complete = isMonthComplete(period, new Date(), FINAL_DATA_LAG_DAYS);
+  if (!complete && !partial) {
     throw new SearchConsoleError(
-      `${period} is not final yet. Search Console data settles about three days after the month ends (${endDate}). ` +
-        `Try again after that, or run with --indexing-only to record indexing now and mark the search numbers as pending.`,
+      `${period} is not final yet. Search Console data settles about three days after the month ends (${month.endDate}). ` +
+        "Try again after that, or run with --partial for the month so far.",
     );
   }
-  const range = monthRange(period);
-  const [current, previous, pages, queries] = await Promise.all([
+  // A running month asks up to yesterday; Google only returns days it has finalised.
+  const range = complete ? month : { startDate: month.startDate, endDate: yesterday(new Date()) };
+  if (range.endDate < range.startDate) throw new SearchConsoleError(`${period} has no complete days yet.`);
+  const [current, previous, pages, queries, days] = await Promise.all([
     query(token, property, range),
     query(token, property, monthRange(previousPeriod(period))),
     query(token, property, range, "page", PAGE_ROWS),
     query(token, property, range, "query", QUERY_ROWS),
+    query(token, property, range, "date", 40),
   ]);
   const totals = totalsFromResponse(current);
   if (!totals) {
@@ -150,6 +135,7 @@ async function fetchPerformance(token: string, property: string, period: string)
     );
   }
   return {
+    throughDate: complete ? month.endDate : (lastDataDate(days) ?? range.endDate),
     totals,
     previousTotals: totalsFromResponse(previous),
     topPages: topPagesFromRows(pages, TOP_N),
@@ -157,17 +143,17 @@ async function fetchPerformance(token: string, property: string, period: string)
   };
 }
 
-async function fetchSearch(period: string, indexingOnly: boolean): Promise<void> {
+async function fetchSearch(period: string, indexingOnly: boolean, partial: boolean): Promise<void> {
   if (!PERIOD.test(period)) {
     throw new SearchConsoleError(`Pass the month as YYYY-MM, for example: npm run report:search -- 2026-08 (got "${period}")`);
   }
 
   const config = parseConfig(JSON.parse(readFileSync(join(ROOT, "config.json"), "utf8")));
   const { property, sitemapUrl } = config.searchConsole;
-  const token = await accessToken();
+  const token = await accessToken(SCOPES.searchConsole);
 
   const [performance, indexing] = await Promise.all([
-    indexingOnly ? Promise.resolve(null) : fetchPerformance(token, property, period),
+    indexingOnly ? Promise.resolve(null) : fetchPerformance(token, property, period, partial),
     checkIndexing(token, property, sitemapUrl),
   ]);
 
@@ -192,7 +178,7 @@ async function fetchSearch(period: string, indexingOnly: boolean): Promise<void>
   if (performance) {
     const { totals, previousTotals } = performance;
     const change = previousTotals ? ` (previous month: ${previousTotals.impressions} and ${previousTotals.clicks})` : "";
-    console.log(`  ${totals.impressions} impressions, ${totals.clicks} clicks${change}`);
+    console.log(`  1 to ${performance.throughDate}: ${totals.impressions} impressions, ${totals.clicks} clicks${change}`);
     console.log(`  ${performance.topPages.length} top pages, ${performance.topQueries.length} top queries`);
   } else {
     console.log("  Impressions and clicks: pending. Run again without --indexing-only once Google releases the month.");
@@ -200,7 +186,11 @@ async function fetchSearch(period: string, indexingOnly: boolean): Promise<void>
 }
 
 const args = process.argv.slice(2);
-fetchSearch(args.find((arg) => !arg.startsWith("--")) ?? "", args.includes("--indexing-only")).catch((error: unknown) => {
+fetchSearch(
+  args.find((arg) => !arg.startsWith("--")) ?? "",
+  args.includes("--indexing-only"),
+  args.includes("--partial"),
+).catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });

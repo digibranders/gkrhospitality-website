@@ -22,6 +22,7 @@ import {
   layoutProblems,
   parseConfig,
   parseLayoutProbe,
+  parseAnalytics,
   parseMonth,
   parseSearch,
   renderReport,
@@ -61,7 +62,7 @@ function readJson(path: string): unknown {
 
 function availablePeriods(): string[] {
   return readdirSync(MONTHS_DIR)
-    .filter((file) => file.endsWith(".json") && !file.endsWith(".search.json"))
+    .filter((file) => /^\d{4}-\d{2}\.json$/.test(file))
     .map((file) => file.replace(/\.json$/, ""))
     .sort();
 }
@@ -159,8 +160,14 @@ function build(period: string): void {
   }
   const search = parseSearch(readJson(searchPath), period, `months/${period}.search.json`);
 
+  const analyticsPath = join(MONTHS_DIR, `${period}.analytics.json`);
+  if (!existsSync(analyticsPath)) {
+    throw new BuildError(`No GA4 data for ${period}. Run: npm run report:analytics -- ${period}`);
+  }
+  const analytics = parseAnalytics(readJson(analyticsPath), period, `months/${period}.analytics.json`);
+
   const template = readFileSync(join(ROOT, "template.html"), "utf8");
-  const html = inlineAssets(renderReport(template, config, month, search), (assetPath) => {
+  const html = inlineAssets(renderReport(template, config, month, search, analytics), (assetPath) => {
     const file = join(ROOT, assetPath);
     if (!existsSync(file)) throw new BuildError(`Missing asset: reports/care-report/${assetPath}`);
     return readFileSync(file).toString("base64");

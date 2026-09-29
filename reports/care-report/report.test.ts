@@ -6,18 +6,20 @@ import {
   countPdfPages,
   describeChange,
   formatDate,
+  formatStatNumber,
   formatPeriod,
   inlineAssets,
   layoutProblems,
   parseConfig,
   parseLayoutProbe,
+  parseAnalytics,
   parseMonth,
   parseSearch,
   renderReport,
   reportFileStem,
   withLayoutProbe,
 } from "./report.ts";
-import type { LayoutMeasurements, SearchReport } from "./report.ts";
+import type { AnalyticsReport, LayoutMeasurements, SearchReport } from "./report.ts";
 
 const here = (file: string): string => fileURLToPath(new URL(file, import.meta.url));
 const readJson = (file: string): unknown => JSON.parse(readFileSync(here(file), "utf8"));
@@ -37,6 +39,7 @@ const testSearch = (): SearchReport => ({
   period: "2026-08",
   fetchedAt: "2026-09-29T10:00:00.000Z",
   performance: {
+    throughDate: "2026-08-31",
     totals: { clicks: 57, impressions: 4210 },
     previousTotals: { clicks: 48, impressions: 4380 },
     topPages: [
@@ -50,6 +53,19 @@ const testSearch = (): SearchReport => ({
     ],
   },
   indexing: { checkedAt: "2026-09-29T10:00:00.000Z", pagesChecked: 10, pagesIndexed: 10, notIndexed: [] },
+});
+
+/** Test data only. Real months get their numbers from npm run report:analytics. */
+const testAnalytics = (): AnalyticsReport => ({
+  source: "Google Analytics 4",
+  propertyId: "552679084",
+  period: "2026-08",
+  fetchedAt: "2026-09-29T10:00:00.000Z",
+  startDate: "2026-08-01",
+  throughDate: "2026-08-31",
+  trackingStarted: null,
+  current: { visitors: 165, visits: 189, searchVisits: 47 },
+  previous: { visitors: 150, visits: 170, searchVisits: 40 },
 });
 
 const problemsOf = (fn: () => unknown): string[] => {
@@ -180,7 +196,7 @@ describe("renderReport", () => {
   const config = parseConfig(rawConfig);
 
   it("fills every placeholder in the template", () => {
-    const html = renderReport(template, config, parseMonth(rawAugust, config), testSearch());
+    const html = renderReport(template, config, parseMonth(rawAugust, config), testSearch(), testAnalytics());
     expect(html).not.toMatch(/\{\{/);
     expect(html).toContain("<h1>Your website is <em>healthy</em> and fully cared for.</h1>");
     expect(html).toContain("Issued 28 August 2026");
@@ -194,15 +210,18 @@ describe("renderReport", () => {
   });
 
   it("renders the search section with readable page names and month-on-month change", () => {
-    const html = renderReport(template, config, parseMonth(rawAugust, config), testSearch());
-    expect(html).toContain("Search in August");
-    expect(html).toContain("Google Search, 1 to 31 August.");
+    const html = renderReport(template, config, parseMonth(rawAugust, config), testSearch(), testAnalytics());
+    expect(html).toContain("Visitors and search in August");
+    expect(html).toContain("Google Analytics and Google Search, 1 to 31 August.");
+    expect(html).toContain('<div class="stat__value">165</div>');
+    expect(html).toContain('<div class="stat__change stat__change--up">Up 10% on July</div>');
     expect(html).toContain('<div class="stat__value">4,210</div>');
     expect(html).toContain('<div class="stat__change">Down 4% on July</div>');
     expect(html).toContain('<div class="stat__change stat__change--up">Up 19% on July</div>');
     expect(html).toContain('<span class="ranking__name">Home</span><span class="ranking__clicks">31</span>');
     expect(html).toContain('<span class="ranking__name">/work/boston-harbor</span>');
     expect(html).toContain("All 10 pages indexed by Google.");
+    expect(html).toContain("Google keeps rare searches private, so these cover 28 of 57 clicks.");
     expect(html).toContain("&lt;b&gt;hospitality&lt;/b&gt; consultant nyc");
   });
 
@@ -210,9 +229,9 @@ describe("renderReport", () => {
     const base = testSearch();
     const search: SearchReport = {
       ...base,
-      performance: { totals: { clicks: 0, impressions: 90 }, previousTotals: null, topPages: [], topQueries: [] },
+      performance: { throughDate: "2026-08-31", totals: { clicks: 0, impressions: 90 }, previousTotals: null, topPages: [], topQueries: [] },
     };
-    const html = renderReport(template, config, parseMonth(rawAugust, config), search);
+    const html = renderReport(template, config, parseMonth(rawAugust, config), search, testAnalytics());
     expect(html).toContain("No page earned a click from search in August.");
     expect(html).toContain("No query brought a click in August.");
     expect(html).toContain("No July data to compare");
@@ -224,24 +243,26 @@ describe("renderReport", () => {
       performance: null,
       indexing: { checkedAt: "2026-09-29T10:00:00.000Z", pagesChecked: 10, pagesIndexed: 9, notIndexed: ["/gallery"] },
     };
-    const html = renderReport(template, config, parseMonth(rawAugust, config), search);
+    const html = renderReport(template, config, parseMonth(rawAugust, config), search, testAnalytics());
     expect(html).toContain("Impressions, clicks, top pages and top queries for August are not available yet.");
     expect(html).toContain("9 of 10 pages indexed by Google.");
-    expect(html).not.toContain('class="stat__value"');
+    // Visitors still show (GA4 has them); only the search numbers wait.
+    expect(html).toContain('<div class="stat__label">Visitors</div>');
+    expect(html).not.toContain('<div class="stat__label">Impressions</div>');
     expect(html).not.toContain('class="ranking__name"');
   });
 
   it("escapes HTML in every piece of copy", () => {
     const data = august();
     data.summary = 'Blocked <script>alert("x")</script> & more.';
-    const html = renderReport(template, config, parseMonth(data, config), testSearch());
+    const html = renderReport(template, config, parseMonth(data, config), testSearch(), testAnalytics());
     expect(html).not.toContain("<script>");
     expect(html).toContain("Blocked &lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; &amp; more.");
   });
 
   it("fails loudly when the template asks for a value that does not exist", () => {
     expect(() =>
-      renderReport(`${template}{{unknownToken}}`, config, parseMonth(rawAugust, config), testSearch()),
+      renderReport(`${template}{{unknownToken}}`, config, parseMonth(rawAugust, config), testSearch(), testAnalytics()),
     ).toThrow(/unknownToken/);
   });
 });
@@ -271,6 +292,51 @@ describe("parseSearch", () => {
     const base = testSearch();
     const data = { ...base, performance: { ...base.performance, topQueries: six } };
     expect(problemsOf(() => parseSearch(data, "2026-08")).join("\n")).toMatch(/performance\.topQueries.*at most 5/);
+  });
+});
+
+describe("parseAnalytics", () => {
+  it("accepts data shaped like fetch-analytics.ts output", () => {
+    expect(parseAnalytics(testAnalytics(), "2026-08").current.visitors).toBe(165);
+  });
+
+  it("rejects the wrong month, dates outside it and impossible numbers", () => {
+    const data = {
+      ...testAnalytics(),
+      throughDate: "2026-09-02",
+      current: { visitors: 5, visits: 10, searchVisits: 12 },
+    };
+    const problems = problemsOf(() => parseAnalytics(data, "2026-08")).join("\n");
+    expect(problems).toMatch(/throughDate.*2026-08/);
+    expect(problems).toMatch(/more search visits than visits/);
+    expect(problemsOf(() => parseAnalytics(testAnalytics(), "2026-09")).join("\n")).toMatch(/period/);
+  });
+
+  it("says when tracking began instead of comparing with a month that has no data", () => {
+    const config = parseConfig(rawConfig);
+    const analytics: AnalyticsReport = {
+      ...testAnalytics(),
+      startDate: "2026-08-02",
+      throughDate: "2026-08-28",
+      trackingStarted: "2026-08-02",
+      previous: null,
+    };
+    const search: SearchReport = { ...testSearch(), performance: null };
+    const html = renderReport(template, config, parseMonth(rawAugust, config), search, analytics);
+    expect(html).toContain("Tracking began 2 August");
+    expect(html).toContain("25% of all visits");
+    expect(html).toContain("Google Analytics, 2 to 28 August.");
+    expect(html).not.toContain("No July data");
+  });
+});
+
+describe("formatStatNumber", () => {
+  it("groups thousands, and shortens from 100,000 so the number fits its column", () => {
+    expect(formatStatNumber(47)).toBe("47");
+    expect(formatStatNumber(4210)).toBe("4,210");
+    expect(formatStatNumber(99_999)).toBe("99,999");
+    expect(formatStatNumber(128_450)).toBe("128.5K");
+    expect(formatStatNumber(1_284_300)).toBe("1.3M");
   });
 });
 

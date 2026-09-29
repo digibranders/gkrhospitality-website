@@ -1,0 +1,15 @@
+{
+  "source": "Google Analytics 4",
+  "propertyId": "552679084",
+  "period": "2026-09",
+  "fetchedAt": "2026-09-29T08:06:01.459Z",
+  "startDate": "2026-09-03",
+  "throughDate": "2026-09-28",
+  "trackingStarted": "2026-09-03",
+  "current": {
+    "visitors": 165,
+    "visits": 189,
+    "searchVisits": 47
+  },
+  "previous": null
+}

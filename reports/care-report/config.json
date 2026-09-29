@@ -12,7 +12,7 @@
     "serviceName": "Monthly Website Care"
   },
   "searchConsole": {
-    "property": "sc-domain:gkrhospitality.com",
+    "property": "https://www.gkrhospitality.com/",
     "sitemapUrl": "https://www.gkrhospitality.com/sitemap.xml",
     "pageNames": {
       "/": "Home",
@@ -27,6 +27,9 @@
       "/accessibility": "Accessibility",
       "/privacy-policy": "Privacy policy"
     }
+  },
+  "analytics": {
+    "propertyId": "552679084"
   },
   "careAreas": [
     {

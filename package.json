@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "test": "vitest",
     "report": "node reports/care-report/build.ts",
-    "report:search": "node reports/care-report/fetch-search.ts"
+    "report:search": "node reports/care-report/fetch-search.ts",
+    "report:analytics": "node reports/care-report/fetch-analytics.ts"
   },
   "dependencies": {
     "@getbrevo/brevo": "^3.0.4",

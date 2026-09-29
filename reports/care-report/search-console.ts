@@ -1,21 +1,14 @@
 /**
- * Google Search Console: dates, service-account auth and response shaping.
- *
- * No network access here. fetch-search.ts does the HTTP calls; everything in
- * this file is covered by search-console.test.ts.
+ * Google Search Console: response shaping for search analytics and URL
+ * Inspection. No network access here; fetch-search.ts does the HTTP calls.
+ * Covered by search-console.test.ts.
  */
-import { createSign } from "node:crypto";
 
 export class SearchConsoleError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "SearchConsoleError";
   }
-}
-
-export interface ServiceAccountKey {
-  clientEmail: string;
-  privateKey: string;
 }
 
 export interface Totals {
@@ -34,90 +27,8 @@ export interface QueryClicks {
   clicks: number;
 }
 
-export const TOKEN_URL = "https://oauth2.googleapis.com/token";
-const READONLY_SCOPE = "https://www.googleapis.com/auth/webmasters.readonly";
-const TOKEN_LIFETIME_S = 3600;
 /** Search Console data is final roughly two to three days after the day it describes. */
-const FINAL_DATA_LAG_DAYS = 3;
-
-/* ------------------------------------------------------------------ */
-/* Dates                                                               */
-/* ------------------------------------------------------------------ */
-
-const PERIOD = /^(\d{4})-(\d{2})$/;
-
-function periodParts(period: string): { year: number; month: number } {
-  const match = PERIOD.exec(period);
-  const month = match ? Number(match[2]) : 0;
-  if (!match || month < 1 || month > 12) {
-    throw new SearchConsoleError(`Expected a month as YYYY-MM, got "${period}"`);
-  }
-  return { year: Number(match[1]), month };
-}
-
-const pad = (n: number): string => String(n).padStart(2, "0");
-
-/** First and last day of the month, as Search Console expects them. */
-export function monthRange(period: string): { startDate: string; endDate: string } {
-  const { year, month } = periodParts(period);
-  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  return { startDate: `${year}-${pad(month)}-01`, endDate: `${year}-${pad(month)}-${pad(lastDay)}` };
-}
-
-export function previousPeriod(period: string): string {
-  const { year, month } = periodParts(period);
-  return month === 1 ? `${year - 1}-12` : `${year}-${pad(month - 1)}`;
-}
-
-/** True once every day of the month has final Search Console data. */
-export function isMonthComplete(period: string, now: Date): boolean {
-  const { year, month } = periodParts(period);
-  const finalFrom = Date.UTC(year, month, FINAL_DATA_LAG_DAYS); // day 0 of next month is the last day
-  return now.getTime() >= finalFrom;
-}
-
-/* ------------------------------------------------------------------ */
-/* Service account auth                                                */
-/* ------------------------------------------------------------------ */
-
-/** Validates the JSON key file downloaded from Google Cloud. */
-export function parseServiceAccountKey(input: unknown): ServiceAccountKey {
-  const hint =
-    "Expected a service account key: the JSON file from Google Cloud > IAM & Admin > Service Accounts > Keys.";
-  if (typeof input !== "object" || input === null) throw new SearchConsoleError(hint);
-  const key = input as Record<string, unknown>;
-  if (key.type !== "service_account") {
-    throw new SearchConsoleError(`${hint} This file has "type": ${JSON.stringify(key.type)}.`);
-  }
-  if (typeof key.client_email !== "string" || typeof key.private_key !== "string") {
-    throw new SearchConsoleError(`${hint} It is missing client_email or private_key.`);
-  }
-  return { clientEmail: key.client_email, privateKey: key.private_key };
-}
-
-const base64Url = (text: string): string => Buffer.from(text, "utf8").toString("base64url");
-
-/** A signed JWT that Google exchanges for a read-only Search Console access token. */
-export function createServiceAccountJwt(key: ServiceAccountKey, nowSeconds: number): string {
-  const header = base64Url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
-  const claims = base64Url(
-    JSON.stringify({
-      iss: key.clientEmail,
-      scope: READONLY_SCOPE,
-      aud: TOKEN_URL,
-      iat: nowSeconds,
-      exp: nowSeconds + TOKEN_LIFETIME_S,
-    }),
-  );
-  const signer = createSign("RSA-SHA256");
-  signer.update(`${header}.${claims}`);
-  return `${header}.${claims}.${signer.sign(key.privateKey).toString("base64url")}`;
-}
-
-export function tokenRequestBody(jwt: string): string {
-  return new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: jwt }).toString();
-}
-
+export const FINAL_DATA_LAG_DAYS = 3;
 
 /* ------------------------------------------------------------------ */
 /* Search Analytics responses                                          */
@@ -249,4 +160,13 @@ export function indexingFromInspections(
     if (verdict !== "PASS") notIndexed.push(path);
   }
   return { checkedAt, pagesChecked: results.length, pagesIndexed: results.length - notIndexed.length, notIndexed };
+}
+
+/** The latest day with any data, from a query with the date dimension. Null when there is none. */
+export function lastDataDate(response: unknown): string | null {
+  const days = readRows(response)
+    .map((row) => row.keys[0] ?? "")
+    .filter((day) => /^\d{4}-\d{2}-\d{2}$/.test(day))
+    .sort();
+  return days.length > 0 ? days[days.length - 1] : null;
 }

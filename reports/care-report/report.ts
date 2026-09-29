@@ -4,8 +4,9 @@
  * Pure functions only. File and Chrome access live in build.ts, so everything
  * here is covered by report.test.ts without touching the disk or a browser.
  */
-import { monthRange, previousPeriod } from "./search-console.ts";
+import { monthRange, previousPeriod } from "./periods.ts";
 import type { Indexing, PageClicks, QueryClicks, Totals } from "./search-console.ts";
+import type { AnalyticsTotals } from "./analytics.ts";
 
 export interface CareArea {
   name: string;
@@ -23,11 +24,40 @@ export interface ReportConfig {
     /** Readable names for site paths in the top pages list, like "/services": "Services". */
     pageNames: Record<string, string>;
   };
+  analytics: {
+    /** The numeric GA4 property ID, shown in GA4 under Admin > Property details. */
+    propertyId: string;
+  };
   careAreas: CareArea[];
+}
+
+/** Visitors for one range, from GA4. */
+export interface VisitorFigures extends AnalyticsTotals {
+  /** Sessions in GA4's Organic Search channel. */
+  searchVisits: number;
+}
+
+/** Written by fetch-analytics.ts to months/YYYY-MM.analytics.json. */
+export interface AnalyticsReport {
+  source: string;
+  propertyId: string;
+  period: string;
+  fetchedAt: string;
+  /** First day covered: the 1st, or the day tracking began if that was later. */
+  startDate: string;
+  /** Last day covered: the month's last day once final, or the latest complete day while it runs. */
+  throughDate: string;
+  /** Set when GA4 has no earlier data, so there is nothing to compare against. */
+  trackingStarted: string | null;
+  current: VisitorFigures;
+  /** Null when GA4 has no data for the previous month. */
+  previous: VisitorFigures | null;
 }
 
 /** Impressions, clicks and the ranked lists for one month. */
 export interface SearchPerformance {
+  /** Last day covered: the month's last day, or the latest finalised day when fetched with --partial. */
+  throughDate: string;
   totals: Totals;
   /** Null when Search Console has no data for the previous month. */
   previousTotals: Totals | null;
@@ -219,6 +249,10 @@ export function parseConfig(input: unknown): ReportConfig {
   const client = c.record(root.client, "client") ?? {};
   const agency = c.record(root.agency, "agency") ?? {};
   const search = c.record(root.searchConsole, "searchConsole") ?? {};
+  const analytics = c.record(root.analytics, "analytics") ?? {};
+  if (typeof analytics.propertyId === "string" && !/^\d+$/.test(analytics.propertyId)) {
+    c.fail("analytics.propertyId", `must be the numeric GA4 property ID (got "${analytics.propertyId}")`);
+  }
   const rawPageNames = c.record(search.pageNames, "searchConsole.pageNames") ?? {};
   const pageNames: Record<string, string> = {};
   for (const path of Object.keys(rawPageNames)) {
@@ -251,6 +285,7 @@ export function parseConfig(input: unknown): ReportConfig {
       serviceName: c.text(agency.serviceName, "agency.serviceName", LIMITS.short),
     },
     searchConsole: { property, sitemapUrl, pageNames },
+    analytics: { propertyId: c.text(analytics.propertyId, "analytics.propertyId", 20) },
     careAreas: [],
   };
 
@@ -375,7 +410,12 @@ export function parseSearch(input: unknown, period: string, source = "search fil
   const performance = (raw: unknown): SearchPerformance | null => {
     if (raw === null) return null;
     const perf = c.record(raw, "performance") ?? {};
+    const throughDate = c.date(perf.throughDate, "performance.throughDate");
+    if (throughDate && period && !throughDate.startsWith(period)) {
+      c.fail("performance.throughDate", `must fall in ${period}`);
+    }
     return {
+      throughDate,
       totals: totals(perf.totals, "performance.totals"),
       previousTotals: perf.previousTotals === null ? null : totals(perf.previousTotals, "performance.previousTotals"),
       topPages: ranked(perf.topPages, "performance.topPages").map((item, i) => {
@@ -428,6 +468,47 @@ export function parseSearch(input: unknown, period: string, source = "search fil
     c.fail("indexing.checkedAt", "must be a date and time");
   }
 
+  c.throwIfAny(source);
+  return report;
+}
+
+/** Validates months/YYYY-MM.analytics.json, the file fetch-analytics.ts writes. */
+export function parseAnalytics(input: unknown, period: string, source = "analytics file"): AnalyticsReport {
+  const c = new Checker();
+  const root = c.record(input, "analytics") ?? {};
+  const figures = (raw: unknown, path: string): VisitorFigures => {
+    const f = c.record(raw, path) ?? {};
+    const parsed = {
+      visitors: c.count(f.visitors, `${path}.visitors`),
+      visits: c.count(f.visits, `${path}.visits`),
+      searchVisits: c.count(f.searchVisits, `${path}.searchVisits`),
+    };
+    if (parsed.searchVisits > parsed.visits) c.fail(path, "has more search visits than visits");
+    return parsed;
+  };
+  const report: AnalyticsReport = {
+    source: c.text(root.source, "source", LIMITS.short),
+    propertyId: c.text(root.propertyId, "propertyId", 20),
+    period: c.text(root.period, "period", 7),
+    fetchedAt: c.text(root.fetchedAt, "fetchedAt", 40),
+    startDate: c.date(root.startDate, "startDate"),
+    throughDate: c.date(root.throughDate, "throughDate"),
+    trackingStarted: root.trackingStarted === null ? null : c.date(root.trackingStarted, "trackingStarted"),
+    current: figures(root.current, "current"),
+    previous: root.previous === null ? null : figures(root.previous, "previous"),
+  };
+  if (report.period && report.period !== period) {
+    c.fail("period", `is "${report.period}" but this is the ${period} report; fetch the analytics data again`);
+  }
+  if (report.startDate && report.throughDate && report.throughDate < report.startDate) {
+    c.fail("throughDate", "is before startDate");
+  }
+  if (report.period && report.startDate && !report.startDate.startsWith(report.period)) {
+    c.fail("startDate", `must fall in ${report.period}`);
+  }
+  if (report.period && report.throughDate && !report.throughDate.startsWith(report.period)) {
+    c.fail("throughDate", `must fall in ${report.period}`);
+  }
   c.throwIfAny(source);
   return report;
 }
@@ -535,6 +616,16 @@ function renderCareAreas(areas: CareArea[]): string {
 }
 
 const numberFormat = new Intl.NumberFormat("en-US");
+const compactFormat = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
+
+/**
+ * Big numbers for the stat row. Each stat column is about 100px wide, which
+ * holds six digits with separators; from 100,000 up the short form is used
+ * ("128.5K", "1.3M") so a value can never spill into the next column.
+ */
+export function formatStatNumber(value: number): string {
+  return value < 100_000 ? numberFormat.format(value) : compactFormat.format(value);
+}
 
 /** Plain-language change against the previous month, like "Up 18% on July". */
 export function describeChange(
@@ -574,14 +665,45 @@ export function pageName(path: string, pageNames: Record<string, string>): strin
   return pageNames[path] ?? path;
 }
 
+/** "2026-09-02" to "2026-09-28" becomes "2 to 28 September". Both dates are in the same month. */
+function describeRange(startDate: string, endDate: string): string {
+  const start = formatDate(startDate).split(" ");
+  const end = formatDate(endDate).split(" ");
+  return `${start[0]} to ${end[0]} ${end[1]}`;
+}
+
+/** Where the numbers come from, and the days they cover. */
+function describeSources(analytics: AnalyticsReport, search: SearchReport, period: string): string {
+  const month = monthRange(period);
+  const analyticsRange = describeRange(analytics.startDate, analytics.throughDate);
+  if (!search.performance) return `Google Analytics, ${analyticsRange}.`;
+  const searchRange = describeRange(month.startDate, search.performance.throughDate);
+  return analyticsRange === searchRange
+    ? `Google Analytics and Google Search, ${searchRange}.`
+    : `Google Analytics, ${analyticsRange}. Google Search, ${searchRange}.`;
+}
+
 function renderStat(value: number, label: string, change: string): string {
   return [
     '        <div class="stat">',
-    `          <div class="stat__value">${numberFormat.format(value)}</div>`,
+    `          <div class="stat__value">${formatStatNumber(value)}</div>`,
     `          <div class="stat__label">${escapeHtml(label)}</div>`,
     `          ${change}`,
     "        </div>",
   ].join("\n");
+}
+
+/**
+ * Google withholds rare searches for privacy, so the listed queries often
+ * account for only part of the month's clicks. Say so, or a short list looks
+ * like missing data. Empty when the list covers every click.
+ */
+function queryCoverageNote(perf: SearchPerformance): string {
+  const listed = perf.topQueries.reduce((sum, item) => sum + item.clicks, 0);
+  if (perf.topQueries.length === 0 || listed >= perf.totals.clicks) return "";
+  return `          <p class="ranking__note">${escapeHtml(
+    `Google keeps rare searches private, so these cover ${numberFormat.format(listed)} of ${numberFormat.format(perf.totals.clicks)} clicks.`,
+  )}</p>`;
 }
 
 /** "10 of 10 pages indexed by Google." */
@@ -598,23 +720,45 @@ export function describeIndexing(indexing: Indexing): string {
  */
 function renderSearchBody(
   search: SearchReport,
+  analytics: AnalyticsReport,
   config: ReportConfig,
   monthName: string,
   previousMonthName: string,
 ): string {
   const perf = search.performance;
+  const visitors = analytics.current;
+  const before = analytics.previous;
+  // With no earlier GA4 data, say when tracking began rather than "no August data to compare".
+  const visitorChange = (current: number, previous: number | null): string =>
+    previous === null && analytics.trackingStarted
+      ? `<div class="stat__change">${escapeHtml(`Tracking began ${formatDate(analytics.trackingStarted).split(" ").slice(0, 2).join(" ")}`)}</div>`
+      : renderChange(current, previous, previousMonthName);
+  // With no month to compare against, search visits show their share of all visits instead.
+  const searchShare = visitors.visits > 0 ? Math.round((visitors.searchVisits / visitors.visits) * 100) : 0;
+  const visitorStats = [
+    renderStat(visitors.visitors, "Visitors", visitorChange(visitors.visitors, before ? before.visitors : null)),
+    renderStat(
+      visitors.searchVisits,
+      "Search visits",
+      before
+        ? renderChange(visitors.searchVisits, before.searchVisits, previousMonthName)
+        : `<div class="stat__change">${escapeHtml(`${searchShare}% of all visits`)}</div>`,
+    ),
+  ];
   if (!perf) {
     return [
+      ...visitorStats,
       '        <p class="search__pending">',
       `          ${escapeHtml(
         `Impressions, clicks, top pages and top queries for ${monthName} are not available yet. ` +
-          "Google Search Console is still loading this property's data; they will be added to this report once Google releases them.",
+          "Google Search Console is still loading this property's data; they will be added once Google releases them.",
       )}`,
       "        </p>",
     ].join("\n");
   }
   const previous = perf.previousTotals;
   return [
+    ...visitorStats,
     renderStat(perf.totals.impressions, "Impressions", renderChange(perf.totals.impressions, previous ? previous.impressions : null, previousMonthName)),
     renderStat(perf.totals.clicks, "Clicks", renderChange(perf.totals.clicks, previous ? previous.clicks : null, previousMonthName)),
     '        <div class="ranking">',
@@ -630,6 +774,7 @@ function renderSearchBody(
       perf.topQueries.map((item) => ({ name: item.query, clicks: item.clicks })),
       `No query brought a click in ${monthName}. Google hides rare queries for privacy.`,
     ),
+    queryCoverageNote(perf),
     "        </div>",
   ].join("\n");
 }
@@ -644,6 +789,7 @@ export function renderReport(
   config: ReportConfig,
   month: MonthlyReport,
   search: SearchReport,
+  analytics: AnalyticsReport,
 ): string {
   const period = formatPeriod(month.period);
   const previousMonth = formatPeriod(previousPeriod(month.period)).monthName;
@@ -661,9 +807,9 @@ export function renderReport(
     figures: renderFigures(month.figures),
     improvementsNote: escapeHtml(month.improvementsNote),
     improvements: renderImprovements(month.improvements),
-    searchSource: escapeHtml(`Google Search, 1 to ${Number(monthRange(month.period).endDate.slice(8))} ${period.monthName}.`),
+    dataSources: escapeHtml(describeSources(analytics, search, month.period)),
     searchIndexing: escapeHtml(describeIndexing(search.indexing)),
-    searchBody: renderSearchBody(search, config, period.monthName, previousMonth),
+    searchBody: renderSearchBody(search, analytics, config, period.monthName, previousMonth),
     careAreas: renderCareAreas(config.careAreas),
     agencyWordmark: escapeHtml(config.agency.wordmark),
     agencyName: escapeHtml(config.agency.name),

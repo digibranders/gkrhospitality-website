@@ -1,71 +1,14 @@
-import { createPublicKey, createVerify, generateKeyPairSync } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   SearchConsoleError,
-  createServiceAccountJwt,
   indexingFromInspections,
-  isMonthComplete,
-  sitemapPaths,
-  monthRange,
-  parseServiceAccountKey,
-  previousPeriod,
+  lastDataDate,
   searchAnalyticsEndpoint,
+  sitemapPaths,
   topPagesFromRows,
   topQueriesFromRows,
   totalsFromResponse,
 } from "./search-console.ts";
-
-const base64UrlDecode = (text: string): string => Buffer.from(text, "base64url").toString("utf8");
-
-describe("reporting dates", () => {
-  it("covers the whole calendar month", () => {
-    expect(monthRange("2026-08")).toEqual({ startDate: "2026-08-01", endDate: "2026-08-31" });
-    expect(monthRange("2028-02")).toEqual({ startDate: "2028-02-01", endDate: "2028-02-29" });
-  });
-
-  it("finds the previous month across a year boundary", () => {
-    expect(previousPeriod("2026-08")).toBe("2026-07");
-    expect(previousPeriod("2027-01")).toBe("2026-12");
-  });
-
-  it("treats a month as complete three days after it ends, when Search Console data is final", () => {
-    expect(isMonthComplete("2026-08", new Date("2026-09-02T12:00:00Z"))).toBe(false);
-    expect(isMonthComplete("2026-08", new Date("2026-09-03T12:00:00Z"))).toBe(true);
-  });
-});
-
-describe("service account", () => {
-  const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
-  const pem = privateKey.export({ type: "pkcs8", format: "pem" }).toString();
-  const key = parseServiceAccountKey({
-    type: "service_account",
-    client_email: "gkr-care-report@fynix-care-reports.iam.gserviceaccount.com",
-    private_key: pem,
-  });
-
-  it("rejects files that are not service account keys", () => {
-    expect(() => parseServiceAccountKey({ type: "authorized_user" })).toThrow(SearchConsoleError);
-    expect(() => parseServiceAccountKey("not json")).toThrow(/service account key/);
-  });
-
-  it("signs a read-only token request that Google can verify", () => {
-    const jwt = createServiceAccountJwt(key, 1_790_000_000);
-    const [header, claims, signature] = jwt.split(".");
-
-    expect(JSON.parse(base64UrlDecode(header))).toEqual({ alg: "RS256", typ: "JWT" });
-    expect(JSON.parse(base64UrlDecode(claims))).toEqual({
-      iss: key.clientEmail,
-      scope: "https://www.googleapis.com/auth/webmasters.readonly",
-      aud: "https://oauth2.googleapis.com/token",
-      iat: 1_790_000_000,
-      exp: 1_790_003_600,
-    });
-
-    const verifier = createVerify("RSA-SHA256");
-    verifier.update(`${header}.${claims}`);
-    expect(verifier.verify(createPublicKey(publicKey.export({ type: "spki", format: "pem" })), Buffer.from(signature, "base64url"))).toBe(true);
-  });
-});
 
 describe("Search Console responses", () => {
   it("encodes Domain properties in the endpoint URL", () => {
@@ -145,5 +88,17 @@ describe("indexing", () => {
     expect(() => indexingFromInspections([{ path: "/", response: { error: { message: "quota" } } }], "2026-09-29T10:00:00.000Z")).toThrow(
       /no indexing verdict for \//,
     );
+  });
+});
+
+describe("lastDataDate", () => {
+  it("finds the latest day that has data, from a date-dimension response", () => {
+    const rows = [
+      { keys: ["2026-09-24"], clicks: 1, impressions: 5 },
+      { keys: ["2026-09-26"], clicks: 0, impressions: 3 },
+      { keys: ["2026-09-25"], clicks: 2, impressions: 4 },
+    ];
+    expect(lastDataDate(rows)).toBe("2026-09-26");
+    expect(lastDataDate({})).toBeNull();
   });
 });
