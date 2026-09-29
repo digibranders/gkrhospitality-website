@@ -8,7 +8,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 // Garrett Ronan image
-// import garrettImage from '@/assets/images/about/garrett-ronan.png';
 import garrettImage from '@/assets/images/about/GKR_About_3.jpg';
 // Garrett signature
 import signatureImage from '@/assets/images/about/signature.png';

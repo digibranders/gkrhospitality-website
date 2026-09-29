@@ -133,16 +133,23 @@ export default function GalleryPage() {
                 {selectedItem && (
                   <>
                     <AnimatePresence mode="wait">
-                      <motion.img
+                      <motion.div
                         key={`${selectedItem.id}-${currentImageIndex}`}
-                        src={selectedItem.images[currentImageIndex]}
-                        alt={`${selectedItem.title} - Image ${currentImageIndex + 1}`}
                         initial={{ opacity: 0, scale: 1.05 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.4 }}
-                        className="w-full h-full object-cover"
-                      />
+                        className="absolute inset-0"
+                      >
+                        {/* next/image serves a resized, modern-format copy instead of the original file. */}
+                        <Image
+                          src={selectedItem.images[currentImageIndex]}
+                          alt={`${selectedItem.title} - Image ${currentImageIndex + 1}`}
+                          fill
+                          sizes="(max-width: 768px) 100vw, 50vw"
+                          className="object-cover"
+                        />
+                      </motion.div>
                     </AnimatePresence>
 
                     {/* Navigation Buttons for Desktop (Absolute Overlays) */}

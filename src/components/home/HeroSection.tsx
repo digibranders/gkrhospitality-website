@@ -13,6 +13,7 @@ interface HeroSectionProps {
 
 export default function HeroSection({ images, scale }: HeroSectionProps) {
   const [currentHeroImage, setCurrentHeroImage] = useState(0);
+  const [hasAdvanced, setHasAdvanced] = useState(false);
   const reduceMotion = useReducedMotion();
 
   // Hero slideshow: a new image every 5 seconds, unless the visitor asked for reduced motion.
@@ -20,6 +21,7 @@ export default function HeroSection({ images, scale }: HeroSectionProps) {
     if (reduceMotion) return;
     const interval = setInterval(() => {
       setCurrentHeroImage((prev) => (prev + 1) % images.length);
+      setHasAdvanced(true);
     }, 5000);
     return () => clearInterval(interval);
   }, [images.length, reduceMotion]);
@@ -30,24 +32,36 @@ export default function HeroSection({ images, scale }: HeroSectionProps) {
       <div className="absolute inset-0 z-0">
         <motion.div style={{ scale }} className="w-full h-full">
           <div className="absolute inset-0 bg-gradient-to-b from-[#181818]/40 via-[#181818]/30 to-[#181818] z-10"></div>
-          {images.map((image, index) => (
-            <motion.div
-              key={index}
-              className="absolute inset-0 w-full h-full"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: currentHeroImage === index ? 1 : 0 }}
-              transition={{ duration: 1.5 }}
-            >
-              <Image
-                src={image}
-                alt={index === 0 ? "Luxury hotel lobby interior with elegant lighting" : index === 1 ? "Fine dining restaurant table setting" : "Hospitality property exterior view"}
-                fill
-                className="object-cover"
-                priority={index === 0}
-                sizes="100vw"
-              />
-            </motion.div>
-          ))}
+          {images.map((image, index) => {
+            // Mount only the visible slide, the next one (so it is loaded before its turn)
+            // and, once the slideshow has moved, the one fading out. The rest stay off the
+            // page until their turn, instead of loading every full-screen image at once.
+            const next = (currentHeroImage + 1) % images.length;
+            const fadingOut = (currentHeroImage - 1 + images.length) % images.length;
+            if (index !== currentHeroImage && index !== next && !(hasAdvanced && index === fadingOut)) {
+              return null;
+            }
+            return (
+              <motion.div
+                key={index}
+                className="absolute inset-0 w-full h-full"
+                // The first slide renders visible in the server HTML, so it can paint as the
+                // largest contentful element without waiting for JavaScript.
+                initial={index === 0 ? false : { opacity: 0 }}
+                animate={{ opacity: currentHeroImage === index ? 1 : 0 }}
+                transition={{ duration: 1.5 }}
+              >
+                <Image
+                  src={image}
+                  alt={index === 0 ? "Luxury hotel lobby interior with elegant lighting" : index === 1 ? "Fine dining restaurant table setting" : "Hospitality property exterior view"}
+                  fill
+                  className="object-cover"
+                  priority={index === 0}
+                  sizes="100vw"
+                />
+              </motion.div>
+            );
+          })}
         </motion.div>
       </div>
 
