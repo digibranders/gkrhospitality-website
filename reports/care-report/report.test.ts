@@ -36,17 +36,20 @@ const testSearch = (): SearchReport => ({
   property: "sc-domain:gkrhospitality.com",
   period: "2026-08",
   fetchedAt: "2026-09-29T10:00:00.000Z",
-  totals: { clicks: 57, impressions: 4210 },
-  previousTotals: { clicks: 48, impressions: 4380 },
-  topPages: [
-    { path: "/", clicks: 31 },
-    { path: "/services", clicks: 12 },
-    { path: "/work/boston-harbor", clicks: 4 },
-  ],
-  topQueries: [
-    { query: "gkr hospitality", clicks: 22 },
-    { query: "<b>hospitality</b> consultant nyc", clicks: 6 },
-  ],
+  performance: {
+    totals: { clicks: 57, impressions: 4210 },
+    previousTotals: { clicks: 48, impressions: 4380 },
+    topPages: [
+      { path: "/", clicks: 31 },
+      { path: "/services", clicks: 12 },
+      { path: "/work/boston-harbor", clicks: 4 },
+    ],
+    topQueries: [
+      { query: "gkr hospitality", clicks: 22 },
+      { query: "<b>hospitality</b> consultant nyc", clicks: 6 },
+    ],
+  },
+  indexing: { checkedAt: "2026-09-29T10:00:00.000Z", pagesChecked: 10, pagesIndexed: 10, notIndexed: [] },
 });
 
 const problemsOf = (fn: () => unknown): string[] => {
@@ -199,15 +202,33 @@ describe("renderReport", () => {
     expect(html).toContain('<div class="stat__change stat__change--up">Up 19% on July</div>');
     expect(html).toContain('<span class="ranking__name">Home</span><span class="ranking__clicks">31</span>');
     expect(html).toContain('<span class="ranking__name">/work/boston-harbor</span>');
+    expect(html).toContain("All 10 pages indexed by Google.");
     expect(html).toContain("&lt;b&gt;hospitality&lt;/b&gt; consultant nyc");
   });
 
   it("says so plainly when no page or query earned a click", () => {
-    const search = { ...testSearch(), topPages: [], topQueries: [], previousTotals: null };
+    const base = testSearch();
+    const search: SearchReport = {
+      ...base,
+      performance: { totals: { clicks: 0, impressions: 90 }, previousTotals: null, topPages: [], topQueries: [] },
+    };
     const html = renderReport(template, config, parseMonth(rawAugust, config), search);
     expect(html).toContain("No page earned a click from search in August.");
     expect(html).toContain("No query brought a click in August.");
     expect(html).toContain("No July data to compare");
+  });
+
+  it("states plainly when Google has not released the month, with no placeholder numbers", () => {
+    const search: SearchReport = {
+      ...testSearch(),
+      performance: null,
+      indexing: { checkedAt: "2026-09-29T10:00:00.000Z", pagesChecked: 10, pagesIndexed: 9, notIndexed: ["/gallery"] },
+    };
+    const html = renderReport(template, config, parseMonth(rawAugust, config), search);
+    expect(html).toContain("Impressions, clicks, top pages and top queries for August are not available yet.");
+    expect(html).toContain("9 of 10 pages indexed by Google.");
+    expect(html).not.toContain('class="stat__value"');
+    expect(html).not.toContain('class="ranking__name"');
   });
 
   it("escapes HTML in every piece of copy", () => {
@@ -227,21 +248,29 @@ describe("renderReport", () => {
 
 describe("parseSearch", () => {
   it("accepts data shaped like fetch-search.ts output", () => {
-    expect(parseSearch(testSearch(), "2026-08").totals.clicks).toBe(57);
+    expect(parseSearch(testSearch(), "2026-08").performance?.totals.clicks).toBe(57);
+    expect(parseSearch({ ...testSearch(), performance: null }, "2026-08").performance).toBeNull();
   });
 
   it("rejects search data from a different month, and impossible numbers", () => {
-    const data = { ...testSearch(), period: "2026-07", totals: { clicks: 90, impressions: 12 } };
+    const base = testSearch();
+    const data = {
+      ...base,
+      period: "2026-07",
+      performance: { ...base.performance, totals: { clicks: 90, impressions: 12 } },
+      indexing: { ...base.indexing, pagesIndexed: 11 },
+    };
     const problems = problemsOf(() => parseSearch(data, "2026-08")).join("\n");
     expect(problems).toMatch(/period.*2026-07/);
     expect(problems).toMatch(/more clicks than impressions/);
+    expect(problems).toMatch(/pagesIndexed plus notIndexed must equal pagesChecked/);
   });
 
   it("caps each ranked list at five rows", () => {
     const six = Array.from({ length: 6 }, (_, i) => ({ query: `query ${i}`, clicks: 6 - i }));
-    expect(problemsOf(() => parseSearch({ ...testSearch(), topQueries: six }, "2026-08")).join("\n")).toMatch(
-      /topQueries.*at most 5/,
-    );
+    const base = testSearch();
+    const data = { ...base, performance: { ...base.performance, topQueries: six } };
+    expect(problemsOf(() => parseSearch(data, "2026-08")).join("\n")).toMatch(/performance\.topQueries.*at most 5/);
   });
 });
 

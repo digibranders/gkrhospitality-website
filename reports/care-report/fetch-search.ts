@@ -1,12 +1,14 @@
 /**
- * Pulls one month of Google Search numbers into months/<period>.search.json.
+ * Pulls one month of Google Search data into months/<period>.search.json.
  *
- *   npm run report:search -- 2026-08
+ *   npm run report:search -- 2026-08                   full month, from the 3rd of the next month
+ *   npm run report:search -- 2026-09 --indexing-only   indexing now, search numbers marked pending
  *
- * Signs in as a read-only service account (key in .secrets/, see README.md),
- * asks Search Console for the month's impressions and clicks, the previous
- * month's totals, and the top pages and queries by clicks, then writes them for
- * build.ts. The month file you write by hand is never touched.
+ * Signs in as a read-only service account (key in .secrets/, see README.md).
+ * Every run checks each page in the live sitemap with URL Inspection. A full
+ * run also asks Search Console for the month's impressions and clicks, the
+ * previous month's totals, and the top pages and queries by clicks. The month
+ * file you write by hand is never touched.
  *
  * Set GSC_KEY_FILE to use a key stored somewhere else.
  */
@@ -14,21 +16,25 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseConfig, parseSearch } from "./report.ts";
-import type { SearchReport } from "./report.ts";
+import type { SearchPerformance, SearchReport } from "./report.ts";
 import {
   SearchConsoleError,
   TOKEN_URL,
+  URL_INSPECTION_ENDPOINT,
   createServiceAccountJwt,
+  indexingFromInspections,
   isMonthComplete,
   monthRange,
   parseServiceAccountKey,
   previousPeriod,
   searchAnalyticsEndpoint,
+  sitemapPaths,
   tokenRequestBody,
   topPagesFromRows,
   topQueriesFromRows,
   totalsFromResponse,
 } from "./search-console.ts";
+import type { Indexing } from "./search-console.ts";
 
 const ROOT = fileURLToPath(new URL(".", import.meta.url));
 const KEY_FILE = process.env.GSC_KEY_FILE ?? join(ROOT, ".secrets", "search-console-key.json");
@@ -83,59 +89,95 @@ async function query(
       ...(dimension ? { dimensions: [dimension], rowLimit } : {}),
     }),
   });
+  return readJsonResponse(response, `search analytics ${range.startDate} to ${range.endDate}`);
+}
+
+async function readJsonResponse(response: Response, what: string): Promise<unknown> {
   const body = (await response.json()) as { error?: { message?: string } };
   if (response.status === 403) {
     throw new SearchConsoleError(
-      `The service account cannot read ${property}. In Search Console > Settings > Users and permissions, ` +
+      `The service account cannot read this property (${what}). In Search Console > Settings > Users and permissions, ` +
         "add the service account's email as a Restricted user.",
     );
   }
   if (!response.ok) {
-    throw new SearchConsoleError(`Search Console returned ${response.status}: ${body.error?.message ?? "no details"}`);
+    throw new SearchConsoleError(`Search Console returned ${response.status} for ${what}: ${body.error?.message ?? "no details"}`);
   }
   return body;
 }
 
-async function fetchSearch(period: string): Promise<void> {
-  if (!PERIOD.test(period)) {
-    throw new SearchConsoleError(`Pass the month as YYYY-MM, for example: npm run report:search -- 2026-08 (got "${period}")`);
+/** URL Inspection for every page in the live sitemap. */
+async function checkIndexing(token: string, property: string, sitemapUrl: string): Promise<Indexing> {
+  const sitemap = await fetch(sitemapUrl);
+  if (!sitemap.ok) throw new SearchConsoleError(`Could not load the sitemap ${sitemapUrl} (${sitemap.status}).`);
+  const origin = new URL(sitemapUrl).origin;
+  const paths = sitemapPaths(await sitemap.text(), new URL(sitemapUrl).host);
+  if (paths.length === 0) throw new SearchConsoleError(`The sitemap ${sitemapUrl} lists no pages on ${origin}.`);
+
+  const results: { path: string; response: unknown }[] = [];
+  for (const path of paths) {
+    // Sequential on purpose: URL Inspection is rate limited per property.
+    const response = await fetch(URL_INSPECTION_ENDPOINT, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ inspectionUrl: path === "/" ? origin : `${origin}${path}`, siteUrl: property }),
+    });
+    results.push({ path, response: await readJsonResponse(response, `URL Inspection of ${path}`) });
   }
+  return indexingFromInspections(results, new Date().toISOString());
+}
+
+async function fetchPerformance(token: string, property: string, period: string): Promise<SearchPerformance> {
   if (!isMonthComplete(period, new Date())) {
     const { endDate } = monthRange(period);
     throw new SearchConsoleError(
-      `${period} is not final yet. Search Console data settles about three days after the month ends (${endDate}); try again after that.`,
+      `${period} is not final yet. Search Console data settles about three days after the month ends (${endDate}). ` +
+        `Try again after that, or run with --indexing-only to record indexing now and mark the search numbers as pending.`,
     );
   }
-
-  const config = parseConfig(JSON.parse(readFileSync(join(ROOT, "config.json"), "utf8")));
-  const property = config.searchConsole.property;
-  const token = await accessToken();
   const range = monthRange(period);
-
   const [current, previous, pages, queries] = await Promise.all([
     query(token, property, range),
     query(token, property, monthRange(previousPeriod(period))),
     query(token, property, range, "page", PAGE_ROWS),
     query(token, property, range, "query", QUERY_ROWS),
   ]);
-
   const totals = totalsFromResponse(current);
   if (!totals) {
     throw new SearchConsoleError(
-      `Search Console has no data for ${property} in ${period}. A newly added property can take a day or two ` +
-        "to load its history; if it has been longer, check the Performance report in Search Console.",
+      `Search Console has no data for ${property} in ${period}. A newly added property can take a few days to load ` +
+        "its history. Run with --indexing-only to record indexing now and mark the search numbers as pending.",
     );
   }
+  return {
+    totals,
+    previousTotals: totalsFromResponse(previous),
+    topPages: topPagesFromRows(pages, TOP_N),
+    topQueries: topQueriesFromRows(queries, TOP_N),
+  };
+}
+
+async function fetchSearch(period: string, indexingOnly: boolean): Promise<void> {
+  if (!PERIOD.test(period)) {
+    throw new SearchConsoleError(`Pass the month as YYYY-MM, for example: npm run report:search -- 2026-08 (got "${period}")`);
+  }
+
+  const config = parseConfig(JSON.parse(readFileSync(join(ROOT, "config.json"), "utf8")));
+  const { property, sitemapUrl } = config.searchConsole;
+  const token = await accessToken();
+
+  const [performance, indexing] = await Promise.all([
+    indexingOnly ? Promise.resolve(null) : fetchPerformance(token, property, period),
+    checkIndexing(token, property, sitemapUrl),
+  ]);
 
   const report: SearchReport = {
     source: "Google Search Console",
     property,
     period,
     fetchedAt: new Date().toISOString(),
-    totals,
-    previousTotals: totalsFromResponse(previous),
-    topPages: topPagesFromRows(pages, TOP_N),
-    topQueries: topQueriesFromRows(queries, TOP_N),
+    performance,
+    indexing,
   };
 
   // Validate with the same rules build.ts uses, so a bad fetch fails here rather than at build time.
@@ -144,13 +186,21 @@ async function fetchSearch(period: string): Promise<void> {
   const outPath = join(ROOT, "months", `${period}.search.json`);
   writeFileSync(outPath, `${JSON.stringify(report, null, 2)}\n`);
 
-  const change = report.previousTotals ? ` (previous month: ${report.previousTotals.impressions} and ${report.previousTotals.clicks})` : "";
   console.log(`Saved ${display(outPath)}`);
-  console.log(`  ${totals.impressions} impressions, ${totals.clicks} clicks${change}`);
-  console.log(`  ${report.topPages.length} top pages, ${report.topQueries.length} top queries`);
+  console.log(`  Indexing: ${indexing.pagesIndexed} of ${indexing.pagesChecked} pages on Google`);
+  if (indexing.notIndexed.length > 0) console.log(`  Not indexed: ${indexing.notIndexed.join(", ")}`);
+  if (performance) {
+    const { totals, previousTotals } = performance;
+    const change = previousTotals ? ` (previous month: ${previousTotals.impressions} and ${previousTotals.clicks})` : "";
+    console.log(`  ${totals.impressions} impressions, ${totals.clicks} clicks${change}`);
+    console.log(`  ${performance.topPages.length} top pages, ${performance.topQueries.length} top queries`);
+  } else {
+    console.log("  Impressions and clicks: pending. Run again without --indexing-only once Google releases the month.");
+  }
 }
 
-fetchSearch(process.argv[2] ?? "").catch((error: unknown) => {
+const args = process.argv.slice(2);
+fetchSearch(args.find((arg) => !arg.startsWith("--")) ?? "", args.includes("--indexing-only")).catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });

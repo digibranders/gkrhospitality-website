@@ -371,6 +371,22 @@
     font-weight: 600;
     color: var(--navy);
   }
+  .search__indexing {
+    margin-top: 4px;
+    font-weight: 600;
+    color: var(--navy);
+  }
+  .search__pending {
+    grid-column: 1 / -1;
+    max-width: 60ch;
+    padding: 12px 14px;
+    border-left: 2px solid var(--copper);
+    background: var(--stone);
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--ink);
+  }
+
   .ranking__empty {
     font-size: 11.5px;
     line-height: 1.5;
@@ -484,27 +500,11 @@
       <div class="section__title">
         <h2 id="search-title">Search in {{monthName}}</h2>
         <p>{{searchSource}}</p>
+        <p class="search__indexing">{{searchIndexing}}</p>
       </div>
 
       <div class="search__body">
-        <div class="stat">
-          <div class="stat__value">{{searchImpressions}}</div>
-          <div class="stat__label">Impressions</div>
-          {{searchImpressionsChange}}
-        </div>
-        <div class="stat">
-          <div class="stat__value">{{searchClicks}}</div>
-          <div class="stat__label">Clicks</div>
-          {{searchClicksChange}}
-        </div>
-        <div class="ranking">
-          <h3>Pages with the most clicks</h3>
-{{topPages}}
-        </div>
-        <div class="ranking">
-          <h3>Queries that brought clicks</h3>
-{{topQueries}}
-        </div>
+{{searchBody}}
       </div>
     </section>
 

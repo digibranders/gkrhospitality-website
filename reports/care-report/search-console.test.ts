@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   SearchConsoleError,
   createServiceAccountJwt,
+  indexingFromInspections,
   isMonthComplete,
+  sitemapPaths,
   monthRange,
   parseServiceAccountKey,
   previousPeriod,
@@ -113,5 +115,35 @@ describe("Search Console responses", () => {
 
   it("rejects responses that are not shaped like Search Console rows", () => {
     expect(() => topQueriesFromRows([{ keys: "gkr", clicks: 1 }], 5)).toThrow(SearchConsoleError);
+  });
+});
+
+describe("indexing", () => {
+  it("reads page paths from the live sitemap, skipping other hosts", () => {
+    const xml = `<?xml version="1.0"?><urlset>
+      <url><loc>https://www.gkrhospitality.com</loc></url>
+      <url><loc>https://www.gkrhospitality.com/about</loc></url>
+      <url><loc>https://www.gkrhospitality.com/work/</loc></url>
+      <url><loc>https://evil.example.com/x</loc></url>
+    </urlset>`;
+    expect(sitemapPaths(xml, "www.gkrhospitality.com")).toEqual(["/", "/about", "/work"]);
+  });
+
+  it("counts pages Google reports as indexed and names the ones it does not", () => {
+    const result = indexingFromInspections(
+      [
+        { path: "/", response: { inspectionResult: { indexStatusResult: { verdict: "PASS", lastCrawlTime: "2026-09-26T16:34:11Z" } } } },
+        { path: "/about", response: { inspectionResult: { indexStatusResult: { verdict: "PASS" } } } },
+        { path: "/gallery", response: { inspectionResult: { indexStatusResult: { verdict: "NEUTRAL", coverageState: "Discovered - currently not indexed" } } } },
+      ],
+      "2026-09-29T10:00:00.000Z",
+    );
+    expect(result).toEqual({ checkedAt: "2026-09-29T10:00:00.000Z", pagesChecked: 3, pagesIndexed: 2, notIndexed: ["/gallery"] });
+  });
+
+  it("rejects an inspection response without a verdict", () => {
+    expect(() => indexingFromInspections([{ path: "/", response: { error: { message: "quota" } } }], "2026-09-29T10:00:00.000Z")).toThrow(
+      /no indexing verdict for \//,
+    );
   });
 });

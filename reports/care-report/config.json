@@ -13,6 +13,7 @@
   },
   "searchConsole": {
     "property": "sc-domain:gkrhospitality.com",
+    "sitemapUrl": "https://www.gkrhospitality.com/sitemap.xml",
     "pageNames": {
       "/": "Home",
       "/about": "About",

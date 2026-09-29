@@ -197,3 +197,56 @@ export function topQueriesFromRows(response: unknown, limit: number): QueryClick
     .sort(byClicksThenName<QueryClicks>((item) => item.query))
     .slice(0, limit);
 }
+
+/* ------------------------------------------------------------------ */
+/* Indexing (URL Inspection)                                           */
+/* ------------------------------------------------------------------ */
+
+export const URL_INSPECTION_ENDPOINT = "https://searchconsole.googleapis.com/v1/urlInspection/index:inspect";
+
+export interface Indexing {
+  checkedAt: string;
+  pagesChecked: number;
+  pagesIndexed: number;
+  /** Paths Google did not report as indexed. */
+  notIndexed: string[];
+}
+
+/** Paths listed in a sitemap for the given host, like ["/", "/about"]. Other hosts are ignored. */
+export function sitemapPaths(xml: string, host: string): string[] {
+  const paths: string[] = [];
+  const locations = xml.match(/<loc>\s*([^<\s]+)\s*<\/loc>/g) ?? [];
+  for (const tag of locations) {
+    const raw = tag.replace(/<\/?loc>/g, "").trim();
+    let url: URL;
+    try {
+      url = new URL(raw);
+    } catch {
+      continue;
+    }
+    if (url.host !== host) continue;
+    const path = url.pathname.length > 1 ? url.pathname.replace(/\/+$/, "") : "/";
+    if (!paths.includes(path)) paths.push(path);
+  }
+  return paths;
+}
+
+/**
+ * Summarises URL Inspection results. A page counts as indexed when Google's
+ * verdict is PASS, which is what Search Console shows as "URL is on Google".
+ */
+export function indexingFromInspections(
+  results: { path: string; response: unknown }[],
+  checkedAt: string,
+): Indexing {
+  const notIndexed: string[] = [];
+  for (const { path, response } of results) {
+    const verdict = (response as { inspectionResult?: { indexStatusResult?: { verdict?: unknown } } })?.inspectionResult
+      ?.indexStatusResult?.verdict;
+    if (typeof verdict !== "string") {
+      throw new SearchConsoleError(`Search Console returned no indexing verdict for ${path}: ${JSON.stringify(response)}`);
+    }
+    if (verdict !== "PASS") notIndexed.push(path);
+  }
+  return { checkedAt, pagesChecked: results.length, pagesIndexed: results.length - notIndexed.length, notIndexed };
+}

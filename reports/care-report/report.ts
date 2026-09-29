@@ -5,7 +5,7 @@
  * here is covered by report.test.ts without touching the disk or a browser.
  */
 import { monthRange, previousPeriod } from "./search-console.ts";
-import type { PageClicks, QueryClicks, Totals } from "./search-console.ts";
+import type { Indexing, PageClicks, QueryClicks, Totals } from "./search-console.ts";
 
 export interface CareArea {
   name: string;
@@ -18,10 +18,21 @@ export interface ReportConfig {
   searchConsole: {
     /** "sc-domain:example.com" for a Domain property, or "https://www.example.com/" for a URL-prefix one. */
     property: string;
+    /** The live sitemap; every page in it is checked with URL Inspection each month. */
+    sitemapUrl: string;
     /** Readable names for site paths in the top pages list, like "/services": "Services". */
     pageNames: Record<string, string>;
   };
   careAreas: CareArea[];
+}
+
+/** Impressions, clicks and the ranked lists for one month. */
+export interface SearchPerformance {
+  totals: Totals;
+  /** Null when Search Console has no data for the previous month. */
+  previousTotals: Totals | null;
+  topPages: PageClicks[];
+  topQueries: QueryClicks[];
 }
 
 /** Written by fetch-search.ts to months/YYYY-MM.search.json. */
@@ -30,11 +41,14 @@ export interface SearchReport {
   property: string;
   period: string;
   fetchedAt: string;
-  totals: Totals;
-  /** Null when Search Console has no data for the previous month. */
-  previousTotals: Totals | null;
-  topPages: PageClicks[];
-  topQueries: QueryClicks[];
+  /**
+   * Null while Search Console has not released the month (it settles about
+   * three days after the month ends) or is still loading a new property.
+   * The report then says so instead of showing numbers.
+   */
+  performance: SearchPerformance | null;
+  /** Live URL Inspection results for every page in the sitemap. */
+  indexing: Indexing;
 }
 
 export interface Figure {
@@ -212,6 +226,10 @@ export function parseConfig(input: unknown): ReportConfig {
     pageNames[path] = c.text(rawPageNames[path], `searchConsole.pageNames["${path}"]`, LIMITS.short);
   }
   const property = c.text(search.property, "searchConsole.property", LIMITS.short);
+  const sitemapUrl = c.text(search.sitemapUrl, "searchConsole.sitemapUrl", 200);
+  if (sitemapUrl && !/^https:\/\/[^\s/]+\/\S*sitemap\S*\.xml$/.test(sitemapUrl)) {
+    c.fail("searchConsole.sitemapUrl", `must be an https URL to an XML sitemap (got "${sitemapUrl}")`);
+  }
   if (property && !SEARCH_PROPERTY.test(property)) {
     c.fail(
       "searchConsole.property",
@@ -232,7 +250,7 @@ export function parseConfig(input: unknown): ReportConfig {
       wordmark: c.asset(agency.wordmark, "agency.wordmark"),
       serviceName: c.text(agency.serviceName, "agency.serviceName", LIMITS.short),
     },
-    searchConsole: { property, pageNames },
+    searchConsole: { property, sitemapUrl, pageNames },
     careAreas: [],
   };
 
@@ -354,29 +372,61 @@ export function parseSearch(input: unknown, period: string, source = "search fil
     return list;
   };
 
+  const performance = (raw: unknown): SearchPerformance | null => {
+    if (raw === null) return null;
+    const perf = c.record(raw, "performance") ?? {};
+    return {
+      totals: totals(perf.totals, "performance.totals"),
+      previousTotals: perf.previousTotals === null ? null : totals(perf.previousTotals, "performance.previousTotals"),
+      topPages: ranked(perf.topPages, "performance.topPages").map((item, i) => {
+        const page = c.record(item, `performance.topPages[${i}]`) ?? {};
+        const path = c.text(page.path, `performance.topPages[${i}].path`, 200);
+        if (path && !path.startsWith("/")) c.fail(`performance.topPages[${i}].path`, "must start with /");
+        return { path, clicks: c.count(page.clicks, `performance.topPages[${i}].clicks`) };
+      }),
+      topQueries: ranked(perf.topQueries, "performance.topQueries").map((item, i) => {
+        const query = c.record(item, `performance.topQueries[${i}]`) ?? {};
+        if (typeof query.query !== "string" || query.query.trim() === "") {
+          c.fail(`performance.topQueries[${i}].query`, "must be text");
+        }
+        return {
+          query: typeof query.query === "string" ? query.query : "",
+          clicks: c.count(query.clicks, `performance.topQueries[${i}].clicks`),
+        };
+      }),
+    };
+  };
+  const indexing = (raw: unknown): Indexing => {
+    const idx = c.record(raw, "indexing") ?? {};
+    const notIndexed = c.array(idx.notIndexed, "indexing.notIndexed") ?? [];
+    const parsed: Indexing = {
+      checkedAt: c.text(idx.checkedAt, "indexing.checkedAt", 40),
+      pagesChecked: c.count(idx.pagesChecked, "indexing.pagesChecked"),
+      pagesIndexed: c.count(idx.pagesIndexed, "indexing.pagesIndexed"),
+      notIndexed: notIndexed.map((path, i) => c.text(path, `indexing.notIndexed[${i}]`, 200)),
+    };
+    if (parsed.pagesChecked === 0) c.fail("indexing.pagesChecked", "must be at least 1");
+    if (parsed.pagesIndexed + parsed.notIndexed.length !== parsed.pagesChecked) {
+      c.fail("indexing", "pagesIndexed plus notIndexed must equal pagesChecked");
+    }
+    return parsed;
+  };
+
   const report: SearchReport = {
     source: c.text(root.source, "source", LIMITS.short),
     property: c.text(root.property, "property", LIMITS.short),
     period: c.text(root.period, "period", 7),
     fetchedAt: c.text(root.fetchedAt, "fetchedAt", 40),
-    totals: totals(root.totals, "totals"),
-    previousTotals: root.previousTotals === null ? null : totals(root.previousTotals, "previousTotals"),
-    topPages: ranked(root.topPages, "topPages").map((raw, i) => {
-      const page = c.record(raw, `topPages[${i}]`) ?? {};
-      const path = c.text(page.path, `topPages[${i}].path`, 200);
-      if (path && !path.startsWith("/")) c.fail(`topPages[${i}].path`, "must start with /");
-      return { path, clicks: c.count(page.clicks, `topPages[${i}].clicks`) };
-    }),
-    topQueries: ranked(root.topQueries, "topQueries").map((raw, i) => {
-      const query = c.record(raw, `topQueries[${i}]`) ?? {};
-      if (typeof query.query !== "string" || query.query.trim() === "") c.fail(`topQueries[${i}].query`, "must be text");
-      return { query: typeof query.query === "string" ? query.query : "", clicks: c.count(query.clicks, `topQueries[${i}].clicks`) };
-    }),
+    performance: performance(root.performance),
+    indexing: indexing(root.indexing),
   };
   if (report.period && report.period !== period) {
     c.fail("period", `is "${report.period}" but this is the ${period} report; fetch the search data again`);
   }
   if (report.fetchedAt && Number.isNaN(Date.parse(report.fetchedAt))) c.fail("fetchedAt", "must be a date and time");
+  if (report.indexing.checkedAt && Number.isNaN(Date.parse(report.indexing.checkedAt))) {
+    c.fail("indexing.checkedAt", "must be a date and time");
+  }
 
   c.throwIfAny(source);
   return report;
@@ -524,6 +574,66 @@ export function pageName(path: string, pageNames: Record<string, string>): strin
   return pageNames[path] ?? path;
 }
 
+function renderStat(value: number, label: string, change: string): string {
+  return [
+    '        <div class="stat">',
+    `          <div class="stat__value">${numberFormat.format(value)}</div>`,
+    `          <div class="stat__label">${escapeHtml(label)}</div>`,
+    `          ${change}`,
+    "        </div>",
+  ].join("\n");
+}
+
+/** "10 of 10 pages indexed by Google." */
+export function describeIndexing(indexing: Indexing): string {
+  const all = indexing.pagesIndexed === indexing.pagesChecked;
+  return all
+    ? `All ${indexing.pagesChecked} pages indexed by Google.`
+    : `${indexing.pagesIndexed} of ${indexing.pagesChecked} pages indexed by Google.`;
+}
+
+/**
+ * Impressions and clicks with the ranked lists, or a plain statement that
+ * Google has not released the month yet. Never shows placeholder numbers.
+ */
+function renderSearchBody(
+  search: SearchReport,
+  config: ReportConfig,
+  monthName: string,
+  previousMonthName: string,
+): string {
+  const perf = search.performance;
+  if (!perf) {
+    return [
+      '        <p class="search__pending">',
+      `          ${escapeHtml(
+        `Impressions, clicks, top pages and top queries for ${monthName} are not available yet. ` +
+          "Google Search Console is still loading this property's data; they will be added to this report once Google releases them.",
+      )}`,
+      "        </p>",
+    ].join("\n");
+  }
+  const previous = perf.previousTotals;
+  return [
+    renderStat(perf.totals.impressions, "Impressions", renderChange(perf.totals.impressions, previous ? previous.impressions : null, previousMonthName)),
+    renderStat(perf.totals.clicks, "Clicks", renderChange(perf.totals.clicks, previous ? previous.clicks : null, previousMonthName)),
+    '        <div class="ranking">',
+    "          <h3>Pages with the most clicks</h3>",
+    renderRanking(
+      perf.topPages.map((page) => ({ name: pageName(page.path, config.searchConsole.pageNames), clicks: page.clicks })),
+      `No page earned a click from search in ${monthName}.`,
+    ),
+    "        </div>",
+    '        <div class="ranking">',
+    "          <h3>Queries that brought clicks</h3>",
+    renderRanking(
+      perf.topQueries.map((item) => ({ name: item.query, clicks: item.clicks })),
+      `No query brought a click in ${monthName}. Google hides rare queries for privacy.`,
+    ),
+    "        </div>",
+  ].join("\n");
+}
+
 /**
  * Fills {{token}} placeholders in template.html. Every token in the template
  * must have a value and every value must be used, so the template and this
@@ -537,7 +647,6 @@ export function renderReport(
 ): string {
   const period = formatPeriod(month.period);
   const previousMonth = formatPeriod(previousPeriod(month.period)).monthName;
-  const previous = search.previousTotals;
   const values: Record<string, string> = {
     pageTitle: escapeHtml(`${config.client.name}, Website Care Report, ${period.label}`),
     heroImage: escapeHtml(month.heroImage ?? config.client.heroImage),
@@ -553,18 +662,8 @@ export function renderReport(
     improvementsNote: escapeHtml(month.improvementsNote),
     improvements: renderImprovements(month.improvements),
     searchSource: escapeHtml(`Google Search, 1 to ${Number(monthRange(month.period).endDate.slice(8))} ${period.monthName}.`),
-    searchImpressions: numberFormat.format(search.totals.impressions),
-    searchImpressionsChange: renderChange(search.totals.impressions, previous ? previous.impressions : null, previousMonth),
-    searchClicks: numberFormat.format(search.totals.clicks),
-    searchClicksChange: renderChange(search.totals.clicks, previous ? previous.clicks : null, previousMonth),
-    topPages: renderRanking(
-      search.topPages.map((page) => ({ name: pageName(page.path, config.searchConsole.pageNames), clicks: page.clicks })),
-      `No page earned a click from search in ${period.monthName}.`,
-    ),
-    topQueries: renderRanking(
-      search.topQueries.map((item) => ({ name: item.query, clicks: item.clicks })),
-      `No query brought a click in ${period.monthName}. Google hides rare queries for privacy.`,
-    ),
+    searchIndexing: escapeHtml(describeIndexing(search.indexing)),
+    searchBody: renderSearchBody(search, config, period.monthName, previousMonth),
     careAreas: renderCareAreas(config.careAreas),
     agencyWordmark: escapeHtml(config.agency.wordmark),
     agencyName: escapeHtml(config.agency.name),
