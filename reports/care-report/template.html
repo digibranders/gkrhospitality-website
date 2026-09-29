@@ -362,30 +362,6 @@
     color: var(--ink);
   }
 
-  .areas {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    column-gap: 28px;
-    row-gap: 6px;
-    list-style: none;
-  }
-
-  .area {
-    padding-top: 5px;
-    border-top: 1.5px solid var(--navy);
-  }
-  .area h3 {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--navy);
-  }
-  .area p {
-    margin-top: 2px;
-    font-size: 11px;
-    line-height: 1.45;
-    color: var(--muted);
-  }
-
   /* ---------- Sign-off ---------- */
   .signoff {
     flex: none;
@@ -628,17 +604,19 @@
   }
   .plans .areas-wrap { padding-top: 8px; border-top: 1px solid #D6D1C8; }
   .plans .areas-wrap h2 { font-size: 13px; font-weight: 600; color: var(--navy); }
-  /* One line per area: this list never changes, so it gets the least height. */
-  .plans .areas {
-    margin-top: 6px;
+  /* Each area's checks run on after its name: this list never changes, so it gets the least height. */
+  .areas {
+    display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     column-gap: 32px;
-    row-gap: 2px;
+    row-gap: 5px;
+    margin-top: 6px;
+    list-style: none;
   }
-  .plans .area { padding-top: 0; border-top: 0; font-size: 11px; line-height: 1.45; }
-  .plans .area h3,
-  .plans .area p { display: inline; margin: 0; font-size: 11px; }
-  .plans .area h3 { margin-right: 4px; }
+  .area { font-size: 11px; line-height: 1.45; color: var(--muted); }
+  .area h3,
+  .area p { display: inline; margin: 0; font-size: 11px; }
+  .area h3 { margin-right: 4px; font-weight: 600; color: var(--navy); }
 
   .signoff__page { margin-left: 12px; padding-left: 12px; border-left: 1px solid #D6D1C8; }
 </style>

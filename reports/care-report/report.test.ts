@@ -350,7 +350,16 @@ describe("renderReport: page 1", () => {
   it("raises the domain renewal from the health check in the attention box", () => {
     const html = render();
     expect(html).toContain("Needs your attention");
-    expect(html).toContain("5 December 2026");
+    expect(html).toContain("<strong>Domain renews on 5 December 2026.</strong> Please confirm auto-renew is on at GoDaddy.");
+  });
+
+  it("shows click rate and position instead of repeating that last month has no search data", () => {
+    const perf = testSearch().performance;
+    if (!perf) throw new Error("fixture has performance");
+    const html = render({ search: { ...testSearch(), performance: { ...perf, previousTotals: null } } });
+    expect(html).toContain('<div class="stat__change">Average position 13.8</div>');
+    expect(html).toContain('<div class="stat__change">1% of impressions</div>');
+    expect(html).not.toContain("No July data");
   });
 
   it("leaves the attention box out when nothing needs action", () => {
@@ -383,7 +392,7 @@ describe("renderReport: page 2", () => {
     expect(html).toContain('<td class="dtable__name">hospitalit…new york</td>');
     expect(html).toContain("&lt;b&gt;gkr&lt;/b&gt; hotels");
     expect(html).toContain('<td class="dtable__name">Home</td><td>900</td><td>31</td><td>10.2</td>');
-    expect(html).toContain("Shown: times the site appeared in Google results.");
+    expect(html).toContain("Shown: impressions, the times the site appeared in Google results.");
     expect(html).toContain("the searches listed cover 28 of 57 clicks.");
   });
 
@@ -391,7 +400,7 @@ describe("renderReport: page 2", () => {
     const html = render();
     expect(html).toContain("Where visits came from");
     expect(html).toContain('<span class="barlist__label">Search engines</span>');
-    expect(html).toContain("Visits were 85% on desktop and 15% on mobile, and 88% came from the United States.");
+    expect(html).toContain("Visits were 85% on desktop and 15% on mobile, and 75% came from the United States.");
   });
 
   it("shows site health with real values, flagging the domain renewal", () => {

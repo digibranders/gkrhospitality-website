@@ -6,6 +6,7 @@ import {
   certificateDate,
   headerFindings,
   rdapDomain,
+  registrarName,
   summarisePages,
 } from "./health.ts";
 import type { HealthReport } from "./health.ts";
@@ -36,6 +37,12 @@ describe("health readings", () => {
       registrar: "GoDaddy.com, LLC",
     });
     expect(() => rdapDomain({ events: [] }, "gkrhospitality.com")).toThrow(HealthError);
+  });
+
+  it("gives registrars their everyday name", () => {
+    expect(registrarName("GoDaddy.com, LLC")).toBe("GoDaddy");
+    expect(registrarName("Namecheap, Inc.")).toBe("Namecheap");
+    expect(registrarName("Gandi SAS")).toBe("Gandi SAS");
   });
 
   it("turns a certificate expiry string into a date", () => {

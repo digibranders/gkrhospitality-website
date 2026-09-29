@@ -58,6 +58,11 @@ function daysUntil(iso: string, now: Date): number {
   return Math.floor((Date.parse(`${iso}T00:00:00Z`) - now.getTime()) / 86_400_000);
 }
 
+/** A registrar's everyday name: "GoDaddy.com, LLC" becomes "GoDaddy". */
+export function registrarName(registrar: string): string {
+  return registrar.replace(/(\.com)?,? (LLC|Inc\.?|Ltd\.?)$/i, "");
+}
+
 /** The expiry date and registrar from an RDAP domain record. */
 export function rdapDomain(record: unknown, name: string): HealthReport["domain"] {
   const r = (record ?? {}) as { events?: { eventAction?: string; eventDate?: string }[]; entities?: unknown[] };
@@ -125,7 +130,7 @@ export function attentionFromHealth(health: HealthReport, now: Date): AttentionI
   if (daysUntil(health.domain.expires, now) <= DOMAIN_WARNING_DAYS) {
     items.push({
       title: `Domain renews on ${longDate(health.domain.expires)}`,
-      detail: `Confirm auto-renew is on for ${health.domain.name} with ${health.domain.registrar}, or the site goes offline on that date.`,
+      detail: `Please confirm auto-renew is on at ${registrarName(health.domain.registrar)}. If it lapses, the site goes offline.`,
     });
   }
   if (daysUntil(health.tls.validTo, now) <= CERTIFICATE_WARNING_DAYS) {

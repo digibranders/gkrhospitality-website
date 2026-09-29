@@ -6,7 +6,7 @@
  */
 import { monthRange, nextPeriod, previousPeriod } from "./periods.ts";
 import { barList, dailyColumns, fillDays } from "./charts.ts";
-import { attentionFromHealth } from "./health.ts";
+import { attentionFromHealth, registrarName } from "./health.ts";
 import type { DayStats, DeviceStats, Indexing, PageStats, QueryStats, Totals } from "./search-console.ts";
 import type { AnalyticsTotals, Ranked, VisitorDetail } from "./analytics.ts";
 import type { AttentionItem, HealthReport } from "./health.ts";
@@ -874,9 +874,22 @@ function renderGlance(search: SearchReport, analytics: AnalyticsReport, monthNam
   const perf = search.performance;
   if (perf) {
     const previous = perf.previousTotals;
+    // With no month to compare against, show what the month itself says instead of "no data" twice.
+    const note = (text: string): string => `<div class="stat__change">${escapeHtml(text)}</div>`;
+    const clickRate = perf.totals.impressions > 0 ? Math.round((perf.totals.clicks / perf.totals.impressions) * 100) : 0;
     stats.push(
-      renderStat(perf.totals.impressions, "Impressions", renderChange(perf.totals.impressions, previous ? previous.impressions : null, previousMonthName)),
-      renderStat(perf.totals.clicks, "Clicks", renderChange(perf.totals.clicks, previous ? previous.clicks : null, previousMonthName)),
+      renderStat(
+        perf.totals.impressions,
+        "Impressions",
+        previous
+          ? renderChange(perf.totals.impressions, previous.impressions, previousMonthName)
+          : note(`Average position ${perf.totals.position.toFixed(1)}`),
+      ),
+      renderStat(
+        perf.totals.clicks,
+        "Clicks",
+        previous ? renderChange(perf.totals.clicks, previous.clicks, previousMonthName) : note(`${clickRate}% of impressions`),
+      ),
     );
   } else {
     stats.push(`        <p class="search__pending">${escapeHtml(PENDING_SEARCH(monthName))}</p>`);
@@ -899,7 +912,8 @@ function renderGlance(search: SearchReport, analytics: AnalyticsReport, monthNam
 function renderAttention(items: AttentionItem[]): string {
   if (items.length === 0) return "";
   const rows = items.map(
-    (item) => `        <li><strong>${escapeHtml(item.title)}</strong> ${escapeHtml(item.detail)}</li>`,
+    // The title runs into the detail, so it ends with a full stop unless it already has one.
+    (item) => `        <li><strong>${escapeHtml(/[.!?]$/.test(item.title) ? item.title : `${item.title}.`)}</strong> ${escapeHtml(item.detail)}</li>`,
   );
   return [
     '    <aside class="attention" aria-labelledby="attention-title">',
@@ -980,7 +994,7 @@ function renderSearchDetail(search: SearchReport, config: ReportConfig, period: 
     ["Average position", perf.totals.position.toFixed(1)],
     ...perf.devices.slice(0, 2).map((d): [string, string] => [`Shown on ${d.device.toLowerCase()}`, numberFormat.format(d.impressions)]),
   ]);
-  const key = '        <p class="detail__key">Shown: times the site appeared in Google results. Position: its average place in them, 1 being the top.</p>';
+  const key = '        <p class="detail__key">Shown: impressions, the times the site appeared in Google results. Position: its average place in them, 1 being the top.</p>';
   const days = (value: (d: DayStats) => number) =>
     fillDays(perf.daily.map((d) => ({ date: d.date, value: value(d) })), range.startDate, perf.throughDate);
   const listedClicks = perf.queries.reduce((sum, q) => sum + q.clicks, 0);
@@ -1022,24 +1036,25 @@ function formatDuration(seconds: number): string {
  * Devices and the top country as one sentence: two or three shares read
  * better as words than as a chart, and take one line instead of two lists.
  */
-function audienceNote(d: VisitorDetail, deviceTotal: number, countryTotal: number): string {
-  const share = (part: number, whole: number): string => percentFormat.format(whole > 0 ? part / whole : 0);
+function audienceNote(d: VisitorDetail, totalVisits: number): string {
+  // Capped at 100%: GA4's per-device session counts can add up to slightly more than the month's total.
+  const share = (part: number): string => percentFormat.format(totalVisits > 0 ? Math.min(1, part / totalVisits) : 0);
   const devices = d.devices
     .filter((item) => item.name !== "Other")
     .slice(0, 2)
-    .map((item) => `${share(item.visits, deviceTotal)} on ${item.name.toLowerCase()}`);
+    .map((item) => `${share(item.visits)} on ${item.name.toLowerCase()}`);
   const country = d.countries.find((item) => item.name !== "Other");
   const parts = [
     devices.length ? `Visits were ${devices.join(" and ")}` : "",
-    country ? `${share(country.visits, countryTotal)} came from ${country.name === "United States" ? "the United States" : country.name}` : "",
+    country ? `${share(country.visits)} came from ${country.name === "United States" ? "the United States" : country.name}` : "",
   ].filter(Boolean);
   return parts.length ? `        <p class="detail__note detail__note--wide">${escapeHtml(`${parts.join(", and ")}.`)}</p>` : "";
 }
 
 function renderVisitorDetail(analytics: AnalyticsReport, config: ReportConfig): string {
   const d = analytics.detail;
-  const totalDeviceVisits = d.devices.reduce((sum, item) => sum + item.visits, 0);
-  const totalCountryVisits = d.countries.reduce((sum, item) => sum + item.visits, 0);
+  // Shares are of all visits. The country list holds only the top few, so summing it would overstate the leader.
+  const totalVisits = analytics.current.visits;
   const block = (title: string, list: string): string =>
     ['          <div class="detail__block">', `            <h3>${escapeHtml(title)}</h3>`, `            ${list}`, "          </div>"].join("\n");
   const count = (n: number): string => numberFormat.format(n);
@@ -1059,7 +1074,7 @@ function renderVisitorDetail(analytics: AnalyticsReport, config: ReportConfig): 
       "Pages visitors arrived on",
       barList(d.landingPages.map((p) => ({ label: pageName(p.name, config.searchConsole.pageNames), value: p.visits })), count),
     ),
-    audienceNote(d, totalDeviceVisits, totalCountryVisits),
+    audienceNote(d, totalVisits),
     "      </div>",
   ].join("\n");
 }
@@ -1093,7 +1108,7 @@ function healthTiles(health: HealthReport, month: MonthlyReport, indexing: Index
     {
       label: "Domain renews",
       value: shortDay(health.domain.expires),
-      note: `With ${health.domain.registrar.replace(/(\.com)?,? (LLC|Inc\.?|Ltd\.?)$/i, "")}`,
+      note: `With ${registrarName(health.domain.registrar)}`,
       flag: daysUntil(health.domain.expires) <= 90,
     },
     {
