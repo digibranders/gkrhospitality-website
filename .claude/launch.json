@@ -4,8 +4,24 @@
     {
       "name": "gkr-dev",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["next", "dev", "--port", "3210"],
+      "runtimeArgs": [
+        "next",
+        "dev",
+        "--port",
+        "3210"
+      ],
       "port": 3210
+    },
+    {
+      "name": "gkr-prod",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "next",
+        "start",
+        "--port",
+        "3211"
+      ],
+      "port": 3211
     }
   ]
 }
