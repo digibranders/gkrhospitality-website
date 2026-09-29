@@ -1,6 +1,7 @@
 @theme {
-  --font-sans: "Montserrat", sans-serif;
-  --font-serif: "Cormorant Garamond", serif;
+  /* Font files come from next/font (src/lib/fonts.ts), which defines these variables on <html>. */
+  --font-sans: var(--font-montserrat), "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-cormorant), "Cormorant Garamond", ui-serif, Georgia, serif;
   --color-gold-deep: #8a6d3b;
 
   /* ADA Typography Tokens (16px base) */

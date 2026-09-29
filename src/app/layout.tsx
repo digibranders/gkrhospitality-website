@@ -13,6 +13,7 @@ import JsonLd from '@/components/seo/JsonLd';
 import { organizationSchema, webSiteSchema } from '@/lib/schema';
 import { OG_IMAGE, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/seo';
 import { Toaster } from 'sonner';
+import { fontVariables } from '@/lib/fonts';
 
 export const metadata: Metadata = {
   // Note: no `alternates.canonical` here. Metadata is inherited by every route,
@@ -87,7 +88,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={fontVariables}>
       <body className="antialiased bg-[#141414] text-white selection:bg-[#c5a059] selection:text-white overflow-x-hidden w-full" suppressHydrationWarning>
         <JsonLd data={organizationSchema()} />
         <JsonLd data={webSiteSchema()} />

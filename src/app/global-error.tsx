@@ -3,6 +3,7 @@
 import * as Sentry from '@sentry/nextjs';
 import { useEffect } from 'react';
 import '@/styles/index.css';
+import { fontVariables } from '@/lib/fonts';
 import StatusPage, { primaryActionClass } from '@/components/common/StatusPage';
 
 /**
@@ -16,7 +17,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
   }, [error]);
 
   return (
-    <html lang="en">
+    <html lang="en" className={fontVariables}>
       <body className="antialiased bg-[#181818]">
         <StatusPage
           title="Something went"
