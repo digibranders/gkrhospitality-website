@@ -7,6 +7,7 @@ import { sendContactEmail } from '@/app/actions/send-email';
 import { toast } from 'sonner';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { FAQ_DATA, type FAQItem } from '@/data/faqData';
+import { CONTACT_LIMITS, PROJECT_TYPES, ROLE_OPTIONS } from '@/lib/contact';
 
 export default function Contact() {
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
@@ -27,7 +28,8 @@ export default function Contact() {
   const [turnstileToken, setTurnstileToken] = useState<string>('');
   const turnstileRef = useRef<TurnstileInstance>(null);
 
-  const validateForm = () => {
+  /** Returns the errors found, so the caller can focus the first one without waiting for a re-render. */
+  const validateForm = (): Record<string, string> => {
     const newErrors: Record<string, string> = {};
     if (!formData.name.trim()) newErrors.name = 'Name is required';
     if (!formData.email.trim()) {
@@ -48,12 +50,20 @@ export default function Contact() {
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return newErrors;
+  };
+
+  // Turnstile tokens are single-use, so any failed send needs a fresh challenge.
+  const resetTurnstile = () => {
+    setTurnstileToken('');
+    turnstileRef.current?.reset();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
+    const foundErrors = validateForm();
+    const firstErrorKey = Object.keys(foundErrors)[0];
+    if (!firstErrorKey) {
       setIsSubmitting(true);
       try {
         const result = await sendContactEmail({ ...formData, turnstileToken });
@@ -70,26 +80,22 @@ export default function Contact() {
             roleDescription: '',
             message: ''
           });
-          setTurnstileToken('');
-          if (turnstileRef.current) turnstileRef.current.reset();
-          // Reset success state after 3 seconds
+          resetTurnstile();
+          // Reset success state after 2.5 seconds
           setTimeout(() => setIsSuccess(false), 2500);
         } else {
+          resetTurnstile();
           toast.error(result.error || 'Something went wrong. Please try again.');
         }
       } catch (error: unknown) {
+        resetTurnstile();
         toast.error('An unexpected error occurred. Please try again.');
         console.error('Submission error:', error instanceof Error ? error.message : error);
       } finally {
         setIsSubmitting(false);
       }
     } else {
-      // Focus the first error
-      const firstErrorKey = Object.keys(errors)[0];
-      const firstErrorElement = document.getElementById(firstErrorKey);
-      if (firstErrorElement) {
-        firstErrorElement.focus();
-      }
+      document.getElementById(firstErrorKey)?.focus();
     }
   };
 
@@ -163,6 +169,7 @@ export default function Contact() {
                     type="text"
                     id="name"
                     name="name"
+                    maxLength={CONTACT_LIMITS.name}
                     value={formData.name}
                     onChange={handleChange}
                     aria-invalid={!!errors.name}
@@ -186,6 +193,7 @@ export default function Contact() {
                     type="email"
                     id="email"
                     name="email"
+                    maxLength={CONTACT_LIMITS.email}
                     value={formData.email}
                     onChange={handleChange}
                     aria-invalid={!!errors.email}
@@ -209,6 +217,7 @@ export default function Contact() {
                     type="tel"
                     id="phone"
                     name="phone"
+                    maxLength={CONTACT_LIMITS.phone}
                     value={formData.phone}
                     onChange={handleChange}
                     className="w-full bg-transparent border-b border-[#181818]/20 focus:border-[#c5a059] text-[#181818] py-4 transition-colors outline-none placeholder:text-stone-400"
@@ -225,6 +234,7 @@ export default function Contact() {
                     type="text"
                     id="company"
                     name="company"
+                    maxLength={CONTACT_LIMITS.company}
                     value={formData.company}
                     onChange={handleChange}
                     className="w-full bg-transparent border-b border-[#181818]/20 focus:border-[#c5a059] text-[#181818] py-4 transition-colors outline-none placeholder:text-stone-400"
@@ -248,11 +258,9 @@ export default function Contact() {
                       className={`w-full bg-transparent border-b ${errors.role ? 'border-[#C62828]' : 'border-[#181818]/20'} focus:border-[#c5a059] text-[#181818] py-4 appearance-none outline-none cursor-pointer`}
                     >
                       <option value="" disabled>Select Role</option>
-                      <option value="Developer">Developer</option>
-                      <option value="Investor">Investor</option>
-                      <option value="Owner">Owner</option>
-                      <option value="Exec Manager/ Operator">Exec Manager/ Operator</option>
-                      <option value="Other">Other</option>
+                      {ROLE_OPTIONS.map((role) => (
+                        <option key={role} value={role}>{role}</option>
+                      ))}
                     </select>
                     <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none" />
                   </div>
@@ -277,6 +285,7 @@ export default function Contact() {
                       type="text"
                       id="roleDescription"
                       name="roleDescription"
+                      maxLength={CONTACT_LIMITS.roleDescription}
                       value={formData.roleDescription}
                       onChange={handleChange}
                       aria-invalid={!!errors.roleDescription}
@@ -308,13 +317,9 @@ export default function Contact() {
                       className={`w-full bg-transparent border-b ${errors.projectType ? 'border-[#C62828]' : 'border-[#181818]/20'} focus:border-[#c5a059] text-[#181818] py-4 appearance-none outline-none cursor-pointer`}
                     >
                       <option value="" disabled>Select Type</option>
-                      <option value="Hotel / Resort">Hotel / Resort</option>
-                      <option value="Restaurant">Restaurant</option>
-                      <option value="Bar">Bar</option>
-                      <option value="Nightlife">Nightlife</option>
-                      <option value="Meeting Event Venue">Meeting Event Venue</option>
-                      <option value="Private Club">Private Club</option>
-                      <option value="Mixed-Use Residential Properties">Mixed-Use Residential Properties</option>
+                      {PROJECT_TYPES.map((type) => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
                     </select>
                     <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none" />
                   </div>
@@ -333,6 +338,7 @@ export default function Contact() {
                   <textarea
                     id="message"
                     name="message"
+                    maxLength={CONTACT_LIMITS.message}
                     value={formData.message}
                     onChange={handleChange}
                     aria-invalid={!!errors.message}
@@ -349,17 +355,19 @@ export default function Contact() {
                 </div>
 
                 {/* Turnstile */}
-                <div>
+                <div id="turnstileToken" tabIndex={-1} className="outline-none">
                   <Turnstile
                     ref={turnstileRef}
                     siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
                     onSuccess={(token) => setTurnstileToken(token)}
+                    onExpire={() => setTurnstileToken('')}
+                    onError={() => setTurnstileToken('')}
                     options={{
                       theme: 'light',
                     }}
                   />
                   {errors.turnstileToken && (
-                    <p className="text-[#C62828] text-xs mt-2 flex items-center gap-1">
+                    <p role="alert" className="text-[#C62828] text-xs mt-2 flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" /> {errors.turnstileToken}
                     </p>
                   )}
