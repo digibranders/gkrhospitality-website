@@ -8,7 +8,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 // Garrett Ronan image
-// import garrettImage from '@/assets/images/about/garrett-ronan.png';
 import garrettImage from '@/assets/images/about/GKR_About_3.jpg';
 // Garrett signature
 import signatureImage from '@/assets/images/about/signature.png';
@@ -331,11 +330,9 @@ export default function About() {
                 <p className="text-[#181818] text-lg mb-12 max-w-2xl mx-auto lg:mx-0">
                   Let&apos;s discuss how we can support your hospitality vision
                 </p>
-                <Link href="/contact" className="inline-block">
-                  <Button className="bg-[#181818] text-white hover:bg-white hover:text-[#181818] px-4 py-3 md:px-12 md:py-7 text-[0.75rem] md:text-sm uppercase tracking-[0.15em] md:tracking-[0.3em] font-bold transition-all duration-500 rounded-full h-auto whitespace-normal md:whitespace-nowrap leading-relaxed w-auto max-w-none">
-                    Schedule Your Complimentary Discovery Call
-                  </Button>
-                </Link>
+                <Button asChild className="bg-[#181818] text-white hover:bg-white hover:text-[#181818] px-4 py-3 md:px-12 md:py-7 text-[0.75rem] md:text-sm uppercase tracking-[0.15em] md:tracking-[0.3em] font-bold transition-all duration-500 rounded-full h-auto whitespace-normal md:whitespace-nowrap leading-relaxed w-auto max-w-none">
+                  <Link href="/contact">Schedule Your Complimentary Discovery Call</Link>
+                </Button>
               </motion.div>
             </div>
           </div>

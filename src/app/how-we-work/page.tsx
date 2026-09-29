@@ -17,10 +17,10 @@ export const metadata: Metadata = pageMetadata({
 
 export default function HowWeWorkPage() {
     return (
-        <main className="bg-[#181818] min-h-screen">
+        <div className="bg-[#181818] min-h-screen">
             <JsonLd data={breadcrumbSchema([{ name: 'How We Work', path: '/how-we-work' }])} />
             <h1 className="sr-only">How We Work</h1>
             <ProcessSection steps={HOW_WE_WORK} />
-        </main>
+        </div>
     );
 }

@@ -133,16 +133,23 @@ export default function GalleryPage() {
                 {selectedItem && (
                   <>
                     <AnimatePresence mode="wait">
-                      <motion.img
+                      <motion.div
                         key={`${selectedItem.id}-${currentImageIndex}`}
-                        src={selectedItem.images[currentImageIndex]}
-                        alt={`${selectedItem.title} - Image ${currentImageIndex + 1}`}
                         initial={{ opacity: 0, scale: 1.05 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.4 }}
-                        className="w-full h-full object-cover"
-                      />
+                        className="absolute inset-0"
+                      >
+                        {/* next/image serves a resized, modern-format copy instead of the original file. */}
+                        <Image
+                          src={selectedItem.images[currentImageIndex]}
+                          alt={`${selectedItem.title} - Image ${currentImageIndex + 1}`}
+                          fill
+                          sizes="(max-width: 768px) 100vw, 50vw"
+                          className="object-cover"
+                        />
+                      </motion.div>
                     </AnimatePresence>
 
                     {/* Navigation Buttons for Desktop (Absolute Overlays) */}
@@ -191,13 +198,18 @@ export default function GalleryPage() {
                       {selectedItem.description}
                     </p>
 
-                    <div className="pt-6 flex gap-4 items-center">
-                      <a href={selectedItem.link} target="_blank" rel="noopener noreferrer">
-                        <Button className="bg-[#c5a059] text-[#181818] hover:bg-[#b08d4a] uppercase tracking-[0.2em] px-8 py-6 rounded-none font-bold text-xs flex items-center gap-2">
-                          Learn More <ExternalLink size={16} />
+                    {selectedItem.link && selectedItem.link !== '#' && (
+                      <div className="pt-6 flex gap-4 items-center">
+                        <Button
+                          asChild
+                          className="bg-[#c5a059] text-[#181818] hover:bg-[#b08d4a] uppercase tracking-[0.2em] px-8 py-6 rounded-none font-bold text-xs flex items-center gap-2"
+                        >
+                          <a href={selectedItem.link} target="_blank" rel="noopener noreferrer">
+                            Learn More <ExternalLink size={16} />
+                          </a>
                         </Button>
-                      </a>
-                    </div>
+                      </div>
+                    )}
                   </motion.div>
                 )}
 

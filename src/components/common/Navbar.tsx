@@ -8,13 +8,11 @@ import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'motion/react';
 import logoImage from '@/assets/images/logos/gkr-logo.png';
-import { useHasMounted } from '@/hooks/useHasMounted';
 
 export default function Navbar() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const mounted = useHasMounted();
 
   const handleNavClick = (e: React.MouseEvent, href: string) => {
     // Check if it's a hash link pointing to the current page
@@ -74,7 +72,7 @@ export default function Navbar() {
 
           <div className="hidden xl:flex items-center gap-10">
             <div className="flex gap-10">
-              {mounted && NAV_ITEMS.map((item, i) => (
+              {NAV_ITEMS.map((item, i) => (
                 <Link
                   key={item.label}
                   href={item.href}
@@ -87,13 +85,12 @@ export default function Navbar() {
               ))}
             </div>
 
-            <Link href="/contact">
-              <Button
-                className="bg-transparent border border-[#c5a059] text-[#c5a059] hover:bg-[#c5a059] hover:text-[#181818] rounded-full px-8 py-6 tracking-[0.15em] text-[0.75rem] font-bold transition-all duration-500"
-              >
-                CONTACT US
-              </Button>
-            </Link>
+            <Button
+              asChild
+              className="bg-transparent border border-[#c5a059] text-[#c5a059] hover:bg-[#c5a059] hover:text-[#181818] rounded-full px-8 py-6 tracking-[0.15em] text-[0.75rem] font-bold transition-all duration-500"
+            >
+              <Link href="/contact">CONTACT US</Link>
+            </Button>
           </div>
 
           <button
@@ -146,7 +143,7 @@ export default function Navbar() {
               transition={{ delay: 0.1 }}
               className="flex flex-col gap-8 items-start"
             >
-              {mounted && NAV_ITEMS.map((item, i) => (
+              {NAV_ITEMS.map((item, i) => (
                 <div key={item.label} className="w-full">
                   <Link
                     href={item.href}

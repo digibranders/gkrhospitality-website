@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{pageTitle}}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  @font-face {
+    font-family: "Figtree";
+    font-style: normal;
+    font-weight: 300 600;
+    font-display: block;
+    src: url("assets/figtree-latin-300-600.woff2") format("woff2");
+  }
+  /*
+    Fynix monthly care report.
+    Two US Letter pages, rendered to PDF by build.ts through headless Chrome.
+    Page 1 is the story (verdict, work done, visitors at a glance, anything
+    that needs the client). Page 2 is the evidence behind it.
+    Content comes from months/YYYY-MM.json and config.json; see README.md.
+    Asset paths (assets/...) are inlined as data URIs at build time.
+    Palette: Fynix navy + a single copper accent taken from the client logo.
+    Bands encode meaning: navy = verdict and page header, white = this
+    month, stone = standing care and plans.
+    Charts: one copper mark colour (#B07A55), text always in ink tokens.
+  */
+  :root {
+    --navy: #0C1E2E;
+    --navy-2: #172D40;
+    --paper: #FFFFFF;
+    --stone: #F4F1EC;
+    --ink: #1D2125;
+    --muted: #565D64;
+    --hairline: #E3E0DA;
+    --copper: #8E5B3E;       /* text on light: 5.0:1 on stone, 5.2:1 on white */
+    --copper-light: #E9AF88; /* text on navy: 8.8:1 */
+    --on-navy: #C9D1D8;
+
+    --page-w: 8.5in;
+    --page-h: 11in;
+    --gutter: 56px;
+    --rail: 164px;
+    --rail-gap: 32px;
+  }
+
+  @page { size: letter; margin: 0; }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: #D9D6D0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body {
+    font-family: "Figtree", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    font-size: 12.5px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+
+  .page {
+    position: relative;
+    width: var(--page-w);
+    height: var(--page-h);
+    margin: 24px auto;
+    background: var(--paper);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    break-after: page;
+  }
+  .page:last-child { break-after: auto; }
+
+  @media print {
+    html, body { background: var(--paper); }
+    .page { margin: 0; box-shadow: none; }
+  }
+
+  /* ---------- Masthead: the verdict ---------- */
+  .masthead {
+    position: relative;
+    height: 322px;
+    flex: none;
+    background: var(--navy);
+    color: #fff;
+    padding: 30px var(--gutter) 0;
+    isolation: isolate;
+  }
+
+  .masthead__photo {
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: 47%;
+    z-index: -1;
+  }
+
+  .masthead__photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 58% 50%;
+    display: block;
+  }
+
+  /* Melts the photo into the navy on its left edge and keeps the top-right text legible. */
+  .masthead__photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 90% 46% at 100% 0%, rgb(12 30 46 / 0.86) 0%, rgb(12 30 46 / 0.62) 50%, rgb(12 30 46 / 0) 100%),
+      linear-gradient(90deg, var(--navy) 0%, rgb(12 30 46 / 0.72) 28%, rgb(12 30 46 / 0.18) 70%, rgb(12 30 46 / 0.10) 100%),
+      linear-gradient(180deg, rgb(12 30 46 / 0.6) 0%, rgb(12 30 46 / 0) 36%);
+  }
+
+  .masthead__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .client-logo { height: 58px; width: auto; display: block; }
+
+  .issue {
+    text-align: right;
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: #fff;
+  }
+  .issue strong { font-weight: 600; letter-spacing: 0.01em; }
+  .issue span { color: #E4E9ED; }
+  .issue__label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--copper-light);
+  }
+
+  .verdict {
+    margin-top: 20px;
+    max-width: 452px;
+  }
+
+  .verdict h1 {
+    font-size: 37px;
+    line-height: 1.1;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  .verdict h1 em {
+    font-style: normal;
+    color: var(--copper-light);
+  }
+
+  .verdict__summary {
+    margin-top: 14px;
+    max-width: 440px;
+    text-wrap: pretty;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--on-navy);
+    font-weight: 400;
+  }
+
+  /* ---------- Key figures: straddles the masthead edge ---------- */
+  .figures {
+    position: relative;
+    z-index: 1;
+    margin: -58px var(--gutter) 0;
+    flex: none;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  /*
+    The shadow is a pre-rendered RGBA PNG, not a CSS box-shadow. Chrome prints a
+    blurred box-shadow as a greyscale JPEG behind a luminosity soft mask, and
+    viewers that skip the mask (macOS Preview, Mail, iOS Files) draw it as a
+    solid grey block. A PNG with a real alpha channel renders the same everywhere.
+    Source values: 0 14px 32px -12px rgb(12 30 46 / .28), 0 1px 0 rgb(12 30 46 / .04).
+    The PNG is 3x and covers the panel plus 48px on every side.
+    Both layers sit at z-index -1 inside the panel's stacking context, so the
+    white face (::after) paints over the shadow (::before) and under the figures.
+  */
+  .figures::before,
+  .figures::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+  }
+  .figures::before {
+    inset: -48px;
+    background: url("assets/panel-shadow.png") center / 100% 100% no-repeat;
+  }
+  .figures::after {
+    inset: 0;
+    background: var(--paper);
+    border-radius: 4px;
+  }
+
+  .figure {
+    padding: 17px 22px 15px;
+  }
+  .figure + .figure { border-left: 1px solid var(--hairline); }
+
+  .figure__value {
+    font-size: 40px;
+    line-height: 1;
+    font-weight: 400;
+    letter-spacing: -0.03em;
+    color: var(--navy);
+  }
+  .figure__value small {
+    font-size: 22px;
+    font-weight: 400;
+    letter-spacing: 0;
+    margin-left: 2px;
+    color: var(--muted);
+  }
+
+  .figure__label {
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 1.35;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  /* ---------- Shared section grid: title rail + content ---------- */
+  .section {
+    display: grid;
+    grid-template-columns: var(--rail) 1fr;
+    column-gap: var(--rail-gap);
+    padding: 0 var(--gutter);
+  }
+
+  .section__title h2 {
+    font-size: 19px;
+    line-height: 1.2;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--navy);
+  }
+  .section__title p {
+    margin-top: 8px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+
+  /* ---------- This month ---------- */
+  .changes {
+    padding-top: 22px;
+    padding-bottom: 10px;
+  }
+
+  .changes__list {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 32px;
+    list-style: none;
+  }
+
+  .change {
+    padding: 9px 0 10px;
+    border-top: 1px solid var(--hairline);
+  }
+  .change:nth-child(-n + 2) { padding-top: 2px; border-top: 0; }
+
+  .change__area {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--copper);
+  }
+  .change h3 {
+    margin-top: 5px;
+    font-size: 14px;
+    line-height: 1.3;
+    font-weight: 600;
+    color: var(--navy);
+  }
+  .change p {
+    margin-top: 3px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+
+  /* ---------- Search results ---------- */
+  .search {
+    padding-bottom: 13px;
+  }
+  /* Hairline between the two white sections, inside the gutters. */
+  .search::before {
+    content: "";
+    grid-column: 1 / -1;
+    height: 1px;
+    margin-bottom: 12px;
+    background: var(--hairline);
+  }
+
+  /*
+    Four equal columns: the numbers (visitors, search visits, impressions,
+    clicks) take one each, and each ranked list spans two, so the lists line
+    up with the improvements grid above. minmax(0, 1fr) lets a column shrink
+    below its content, so long queries truncate instead of widening the page.
+  */
+  .search__body {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    column-gap: 32px;
+    row-gap: 10px;
+    align-content: start;
+  }
+  .search__pending { grid-column: span 2; }
+  .glance__chart { grid-column: 1 / -1; margin-top: 2px; }
+
+  .stat__value {
+    font-size: 26px;
+    line-height: 1;
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    color: var(--navy);
+  }
+  .stat__label {
+    margin-top: 4px;
+    font-size: 11.5px;
+    line-height: 1.3;
+    font-weight: 600;
+    color: var(--navy);
+  }
+  .stat__change {
+    margin-top: 1px;
+    font-size: 11px;
+    line-height: 1.35;
+    color: var(--muted);
+  }
+  .stat__change--up { color: var(--copper); font-weight: 500; }
+
+  .search__indexing {
+    margin-top: 4px;
+    font-weight: 600;
+    color: var(--navy);
+  }
+  .search__pending {
+    align-self: start;
+    padding: 10px 12px;
+    border-left: 2px solid var(--copper);
+    background: var(--stone);
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+
+  /* ---------- Sign-off ---------- */
+  .signoff {
+    flex: none;
+    margin-top: auto;
+    background: var(--stone);
+    padding: 0 var(--gutter) 16px;
+  }
+  .signoff__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 10px;
+    border-top: 1px solid #D6D1C8;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .signoff__by {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .signoff__by img { height: 17px; width: auto; display: block; }
+  .signoff__url { padding-left: 12px; border-left: 1px solid #D6D1C8; }
+  .signoff__next strong { color: var(--navy); font-weight: 600; }
+
+  /* ---------- Shared small parts ---------- */
+  figcaption,
+  .detail__block h3,
+  .dtable caption {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--navy);
+    text-align: left;
+    margin-bottom: 4px;
+  }
+  .chart { display: block; overflow: visible; }
+
+  /* ---------- Page 1: needs your attention ---------- */
+  .attention {
+    flex: none;
+    margin: 0 var(--gutter) 14px;
+    padding: 12px 16px 12px;
+    background: var(--stone);
+    border-left: 2px solid var(--copper);
+  }
+  .attention h2 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--navy);
+  }
+  .attention ul { list-style: none; margin-top: 4px; }
+  .attention li {
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+  .attention li + li { margin-top: 3px; }
+  .attention strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- Page 2: header band ---------- */
+  .band {
+    flex: none;
+    height: 64px;
+    padding: 0 var(--gutter);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--navy);
+    border-bottom: 2px solid var(--copper-light);
+    color: #fff;
+  }
+  .band__logo { height: 34px; width: auto; display: block; }
+  .band__title { text-align: right; font-size: 11.5px; line-height: 1.45; }
+  .band__title strong {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--copper-light);
+  }
+  .band__title span { color: #E4E9ED; }
+
+  /* ---------- Page 2: detail sections ---------- */
+  .detail { padding-top: 16px; padding-bottom: 10px; }
+  .detail + .detail::before {
+    content: "";
+    grid-column: 1 / -1;
+    height: 1px;
+    margin-bottom: 12px;
+    background: var(--hairline);
+  }
+  .detail__body { min-width: 0; }
+
+  .facts { margin-top: 10px; }
+  .facts div {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 3px 0;
+    border-top: 1px solid var(--hairline);
+    font-size: 11px;
+  }
+  .facts div:last-child { border-bottom: 1px solid var(--hairline); }
+  .facts dt { color: var(--muted); }
+  .facts dd { font-weight: 600; color: var(--navy); }
+  .detail__key {
+    margin-top: 8px;
+    font-size: 10.5px !important;
+    line-height: 1.45;
+    color: var(--muted);
+  }
+
+  .detail__charts,
+  .detail__tables,
+  .detail__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 32px;
+  }
+  .detail__tables { margin-top: 10px; }
+  .detail__grid { row-gap: 12px; }
+  .detail__note--wide { grid-column: 1 / -1; }
+  .detail__note {
+    margin-top: 6px;
+    font-size: 10.5px;
+    color: var(--muted);
+  }
+
+  .dtable {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+  .dtable th {
+    padding: 0 0 3px;
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--muted);
+    text-align: right;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .dtable th:first-child { text-align: left; }
+  .dtable th:nth-child(n + 2) { width: 38px; }
+  .dtable th:last-child { width: 48px; }
+  .dtable td {
+    padding: 0;
+    line-height: 1.5;
+    text-align: right;
+    color: var(--ink);
+  }
+  .dtable td:nth-child(3) { font-weight: 600; color: var(--navy); }
+  .dtable__name {
+    text-align: left !important;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    padding-right: 8px !important;
+  }
+
+  .barlist { list-style: none; }
+  .barlist__row {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    align-items: center;
+    column-gap: 8px;
+    font-size: 11px;
+    line-height: 1.6;
+  }
+  .barlist__label {
+    color: var(--ink);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .barlist__track { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  /* Rounded data end, square base, no background track. */
+  .barlist__bar {
+    height: 8px;
+    min-width: 2px;
+    max-width: calc(100% - 40px);
+    background: #B07A55;
+    border-radius: 0 2px 2px 0;
+  }
+  .barlist__value { flex: none; font-weight: 600; color: var(--navy); }
+
+  /* ---------- Page 2: site health ---------- */
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    column-gap: 20px;
+    row-gap: 12px;
+    list-style: none;
+  }
+  .tile {
+    display: flex;
+    flex-direction: column;
+    padding-top: 6px;
+    border-top: 1.5px solid var(--navy);
+  }
+  .tile--flag { border-top: 2px solid var(--copper); }
+  .tile__label { font-size: 10.5px; color: var(--muted); }
+  .tile__value { margin-top: 1px; font-size: 15px; line-height: 1.25; font-weight: 600; color: var(--navy); }
+  .tile__note { margin-top: 2px; font-size: 10.5px; line-height: 1.35; color: var(--muted); }
+
+  /* ---------- Page 2: plans and standing care ---------- */
+  .plans {
+    flex: 1;
+    background: var(--stone);
+    padding: 13px var(--gutter) 0;
+  }
+  .plans__next {
+    display: grid;
+    grid-template-columns: var(--rail) 1fr;
+    column-gap: var(--rail-gap);
+    padding-bottom: 9px;
+  }
+  .plans__next h2 { font-size: 14px; font-weight: 600; color: var(--navy); }
+  .plans__next ul {
+    list-style: none;
+    display: grid;
+    row-gap: 1px;
+  }
+  .plans__next li {
+    position: relative;
+    padding-left: 12px;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--ink);
+  }
+  .plans__next li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.62em;
+    width: 5px;
+    height: 1.5px;
+    background: var(--copper);
+  }
+  .plans .areas-wrap { padding-top: 8px; border-top: 1px solid #D6D1C8; }
+  .plans .areas-wrap h2 { font-size: 13px; font-weight: 600; color: var(--navy); }
+  /* Each area's checks run on after its name: this list never changes, so it gets the least height. */
+  .areas {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 32px;
+    row-gap: 5px;
+    margin-top: 6px;
+    list-style: none;
+  }
+  .area { font-size: 11px; line-height: 1.45; color: var(--muted); }
+  .area h3,
+  .area p { display: inline; margin: 0; font-size: 11px; }
+  .area h3 { margin-right: 4px; font-weight: 600; color: var(--navy); }
+
+  .signoff__page { margin-left: 12px; padding-left: 12px; border-left: 1px solid #D6D1C8; }
+</style>
+</head>
+<body>
+  <main class="page">
+
+    <header class="masthead">
+      <div class="masthead__photo" aria-hidden="true">
+        <img src="{{heroImage}}" alt="">
+      </div>
+
+      <div class="masthead__top">
+        <img class="client-logo" src="{{clientLogo}}" alt="{{clientName}}">
+        <p class="issue">
+          <span class="issue__label">Website care report, {{periodLabel}}</span>
+          <strong>{{clientDomain}}</strong><br>
+          <span>Issued {{issuedDate}}</span>
+        </p>
+      </div>
+
+      <div class="verdict">
+        <h1>{{headline}}</h1>
+        <p class="verdict__summary">{{summary}}</p>
+      </div>
+    </header>
+
+    <section class="figures" aria-label="Key figures for {{periodLabel}}">
+{{figures}}
+    </section>
+
+    <section class="section changes" aria-labelledby="changes-title">
+      <div class="section__title">
+        <h2 id="changes-title">What we improved in {{monthName}}</h2>
+        <p>{{improvementsNote}}</p>
+      </div>
+
+      <ul class="changes__list">
+{{improvements}}
+      </ul>
+    </section>
+
+    <section class="section search" aria-labelledby="search-title">
+      <div class="section__title">
+        <h2 id="search-title">Visitors and search in {{monthName}}</h2>
+        <p>{{dataSources}}</p>
+        <p class="search__indexing">{{searchIndexing}}</p>
+      </div>
+
+      <div class="search__body">
+{{glance}}
+      </div>
+    </section>
+
+{{attention}}
+
+    <footer class="signoff signoff--plain">
+      <div class="signoff__inner">
+        <div class="signoff__by">
+          <img src="{{agencyWordmark}}" alt="{{agencyName}}">
+          <span>{{serviceName}}</span>
+          <span class="signoff__url">{{agencyDomain}}</span>
+        </div>
+        <div class="signoff__next">Page 1 of 2</div>
+      </div>
+    </footer>
+
+  </main>
+
+  <main class="page page--detail">
+
+    <header class="band">
+      <img class="band__logo" src="{{clientLogo}}" alt="{{clientName}}">
+      <p class="band__title">
+        <strong>The detail</strong>
+        <span>Website care report, {{periodLabel}}</span>
+      </p>
+    </header>
+
+    <section class="section detail" aria-labelledby="search-detail-title">
+{{searchDetail}}
+    </section>
+
+    <section class="section detail" aria-labelledby="visitor-detail-title">
+{{visitorDetail}}
+    </section>
+
+    <section class="section detail" aria-labelledby="health-title">
+      <div class="section__title">
+        <h2 id="health-title">Site health</h2>
+        <p>{{healthChecked}}</p>
+      </div>
+      <ul class="tiles">
+{{healthTiles}}
+      </ul>
+    </section>
+
+    <section class="plans" aria-label="Plans and standing care">
+      <div class="plans__next">
+        <h2>Coming in {{nextMonthName}}</h2>
+        <ul>
+{{nextMonth}}
+        </ul>
+      </div>
+      <div class="areas-wrap">
+        <h2 id="standing-title">Checked every month</h2>
+        <ul class="areas">
+{{careAreas}}
+        </ul>
+      </div>
+    </section>
+
+    <footer class="signoff">
+      <div class="signoff__inner">
+        <div class="signoff__by">
+          <img src="{{agencyWordmark}}" alt="{{agencyName}}">
+          <span>{{serviceName}}</span>
+          <span class="signoff__url">{{agencyDomain}}</span>
+        </div>
+        <div class="signoff__next">Next report <strong>{{nextReportDate}}</strong><span class="signoff__page">Page 2 of 2</span></div>
+      </div>
+    </footer>
+
+  </main>
+</body>
+</html>

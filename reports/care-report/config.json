@@ -1,0 +1,84 @@
+{
+  "client": {
+    "name": "GKR Hospitality",
+    "domain": "gkrhospitality.com",
+    "logo": "assets/gkr-logo.png",
+    "heroImage": "assets/gkr-rooftop.jpg"
+  },
+  "agency": {
+    "name": "Fynix Digital",
+    "domain": "fynix.digital",
+    "wordmark": "assets/fynix-wordmark.png",
+    "serviceName": "Monthly Website Care"
+  },
+  "searchConsole": {
+    "property": "https://www.gkrhospitality.com/",
+    "sitemapUrl": "https://www.gkrhospitality.com/sitemap.xml",
+    "pageNames": {
+      "/": "Home",
+      "/about": "About",
+      "/services": "Services",
+      "/what-we-do": "What we do",
+      "/how-we-work": "How we work",
+      "/work": "Work",
+      "/gallery": "Gallery",
+      "/reviews": "Reviews",
+      "/contact": "Contact",
+      "/accessibility": "Accessibility",
+      "/privacy-policy": "Privacy policy"
+    }
+  },
+  "analytics": {
+    "propertyId": "552679084"
+  },
+  "careAreas": [
+    {
+      "name": "Monitoring",
+      "checks": [
+        "Live error tracking",
+        "Uptime checks",
+        "Weekly log review"
+      ]
+    },
+    {
+      "name": "Security",
+      "checks": [
+        "Vulnerability scans",
+        "Same-month patching",
+        "Spam & bot protection"
+      ]
+    },
+    {
+      "name": "Code quality",
+      "checks": [
+        "Automated checks",
+        "Automated testing",
+        "Pre-launch verification"
+      ]
+    },
+    {
+      "name": "Software updates",
+      "checks": [
+        "Monthly library review",
+        "Safe, tested updates",
+        "Security patches applied"
+      ]
+    },
+    {
+      "name": "Backups & history",
+      "checks": [
+        "Every change tracked",
+        "Instant rollback ready",
+        "Organized codebase"
+      ]
+    },
+    {
+      "name": "Website health",
+      "checks": [
+        "Contact form tested",
+        "Key pages reviewed",
+        "SSL, domain & DNS checks"
+      ]
+    }
+  ]
+}

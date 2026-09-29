@@ -4,34 +4,34 @@ import heroLa1 from '@/assets/images/hero/la-1.jpg';
 import heroLa2 from '@/assets/images/hero/la-2.png';
 import heroNyc1 from '@/assets/images/hero/nyc-1.jpg';
 import heroNyc2 from '@/assets/images/hero/nyc-2.jpg';
-import heroNyc4 from '@/assets/images/hero/nyc-4.png';
+import heroNyc4 from '@/assets/images/hero/nyc-4.jpg';
 import hero3 from '@/assets/images/hero/hero 3.jpg';
-import hero4 from '@/assets/images/hero/hero_2.png';
+import hero4 from '@/assets/images/hero/hero_2.jpg';
 
 // Service Images
 import serviceConcept from '@/assets/images/services/service-concept.jpeg';
-import serviceInvestment from '@/assets/images/services/service-investment.png';
-import serviceConstruction from '@/assets/images/services/service-construction.png';
-import serviceOperations from '@/assets/images/services/service-operations.png';
+import serviceInvestment from '@/assets/images/services/service-investment.jpg';
+import serviceConstruction from '@/assets/images/services/service-construction.jpg';
+import serviceOperations from '@/assets/images/services/service-operations.jpg';
 import serviceLegal from '@/assets/images/services/service-legal.jpg';
-import serviceAccounting from '@/assets/images/services/service-accounting.png';
-import serviceTraining from '@/assets/images/services/service-training.png';
+import serviceAccounting from '@/assets/images/services/service-accounting.jpg';
+import serviceTraining from '@/assets/images/services/service-training.jpg';
 
 // Work Images
-import initialBriefingImg from '@/assets/images/work/initial-briefing.png';
+import initialBriefingImg from '@/assets/images/work/initial-briefing.jpg';
 import auditDiagnosisImg from '@/assets/images/work/Audit and Clear Diagnosis.png';
 import practicalPlanImg from '@/assets/images/work/Practical Plan.png';
 import projectManagementImg from '@/assets/images/work/Project Management.png';
-import realResultsImg from '@/assets/images/work/Real Results.png';
+import realResultsImg from '@/assets/images/work/Real Results.jpg';
 
 
 // Portfolio Images
-import hotelsImg from '@/assets/images/our_work/hotels.png';
-import restaurantImg from '@/assets/images/our_work/restaurant.png';
+import hotelsImg from '@/assets/images/our_work/hotels.jpg';
+import restaurantImg from '@/assets/images/our_work/restaurant.jpg';
 import nightlifeImg from '@/assets/images/our_work/nightlife.jpg';
 import privateClubImg from '@/assets/images/our_work/private club 1.jpg';
-import eventsImg from '@/assets/images/our_work/events.png';
-import residentImg from '@/assets/images/our_work/resident_1.png';
+import eventsImg from '@/assets/images/our_work/events.jpg';
+import residentImg from '@/assets/images/our_work/resident_1.jpg';
 
 // Testimonial Logos
 import etcVenuesLogo from '@/assets/images/logos/etc-venues.png';

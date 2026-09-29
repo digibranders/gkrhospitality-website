@@ -4,6 +4,7 @@ import Navbar from '@/components/common/Navbar';
 import ScrollToTop from '@/components/common/ScrollToTop';
 
 import Footer from '@/components/common/Footer';
+import MotionProvider from '@/components/common/MotionProvider';
 import {
   GoogleTagManagerNoScript,
   GoogleTagManagerScript,
@@ -12,6 +13,7 @@ import JsonLd from '@/components/seo/JsonLd';
 import { organizationSchema, webSiteSchema } from '@/lib/schema';
 import { OG_IMAGE, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/seo';
 import { Toaster } from 'sonner';
+import { fontVariables } from '@/lib/fonts';
 
 export const metadata: Metadata = {
   // Note: no `alternates.canonical` here. Metadata is inherited by every route,
@@ -86,7 +88,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={fontVariables}>
       <body className="antialiased bg-[#141414] text-white selection:bg-[#c5a059] selection:text-white overflow-x-hidden w-full" suppressHydrationWarning>
         <JsonLd data={organizationSchema()} />
         <JsonLd data={webSiteSchema()} />
@@ -101,12 +103,13 @@ export default function RootLayout({
           Skip to Content
         </a>
 
-        {/* <MovingRibbon /> */}
-        <Navbar />
-        <main id="main-content" className="flex-grow">
-          {children}
-        </main>
-        <Footer />
+        <MotionProvider>
+          <Navbar />
+          <main id="main-content" className="flex-grow">
+            {children}
+          </main>
+          <Footer />
+        </MotionProvider>
       </body>
     </html>
   );

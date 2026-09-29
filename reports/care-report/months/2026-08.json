@@ -1,0 +1,37 @@
+{
+  "period": "2026-08",
+  "issued": "2026-08-28",
+  "nextReport": "2026-09-26",
+  "headline": "Your website is healthy and fully cared for.",
+  "headlineEmphasis": "healthy",
+  "summary": "In August we added live error monitoring, fixed the footer contact button and cleaned up the codebase. Every change is live and verified.",
+  "figures": [
+    { "value": "100", "unit": "%", "label": ["Deployments", "succeeded"] },
+    { "value": "2", "label": ["Security gaps", "closed"] },
+    { "value": "32", "label": ["Code issues", "fixed"] },
+    { "value": "10", "label": ["Pages under", "monitoring"] }
+  ],
+  "improvementsNote": "Four changes shipped this month, each one tied to an area of ongoing care.",
+  "improvements": [
+    {
+      "area": "Monitoring",
+      "title": "Live error monitoring switched on",
+      "body": "The site had none before. Errors are now captured automatically."
+    },
+    {
+      "area": "Website health",
+      "title": "Footer contact button fixed",
+      "body": "It now looks and works like a clear, clickable action."
+    },
+    {
+      "area": "Backups & history",
+      "title": "Codebase cleaned up",
+      "body": "We reviewed the full history and tidied outdated, unused work."
+    },
+    {
+      "area": "Code quality",
+      "title": "Every fix deployed and verified",
+      "body": "All fixes are now live on the site and verified in production."
+    }
+  ]
+}

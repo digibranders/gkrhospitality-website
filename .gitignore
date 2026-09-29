@@ -40,3 +40,7 @@ refactor_report.md.env
 .gstack/
 
 .DS_Store
+# generated care reports (rebuild with: npm run report -- YYYY-MM)
+/reports/care-report/output/
+# Search Console service account key for the care report (never commit)
+/reports/care-report/.secrets/

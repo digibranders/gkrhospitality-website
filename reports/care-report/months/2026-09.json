@@ -1,0 +1,90 @@
+{
+  "period": "2026-09",
+  "issued": "2026-09-29",
+  "nextReport": "2026-11-05",
+  "headline": "Your website is healthy and more secure.",
+  "headlineEmphasis": "healthy",
+  "summary": "In September we fixed how Google indexes every page, restored the brand fonts, cut image weight by 89% and closed 72 security alerts.",
+  "figures": [
+    {
+      "value": "72",
+      "label": [
+        "Security alerts",
+        "resolved"
+      ]
+    },
+    {
+      "value": "89",
+      "unit": "%",
+      "label": [
+        "Image weight",
+        "reduced"
+      ]
+    },
+    {
+      "value": "46",
+      "label": [
+        "Unused packages",
+        "removed"
+      ]
+    },
+    {
+      "value": "4",
+      "label": [
+        "Security headers",
+        "added"
+      ]
+    }
+  ],
+  "improvementsNote": "The main changes this month, each tied to an area of ongoing care.",
+  "improvements": [
+    {
+      "area": "Website health",
+      "title": "Every page now indexed on its own",
+      "body": "Every page used to point Google to the homepage. All 10 are now indexed separately."
+    },
+    {
+      "area": "Code quality",
+      "title": "Brand fonts restored everywhere",
+      "body": "Most visitors saw stand-in fonts. The GKR brand typefaces now load for everyone."
+    },
+    {
+      "area": "Security",
+      "title": "Contact form checked on the server",
+      "body": "Every enquiry is now validated before it is sent, blocking misuse of the form."
+    },
+    {
+      "area": "Software updates",
+      "title": "Packages updated and trimmed",
+      "body": "Next.js and React were updated, and 46 unused packages were removed."
+    },
+    {
+      "area": "Website health",
+      "title": "Images made 89% lighter",
+      "body": "Gallery photos open at a fraction of their old size, and the homepage loads less."
+    },
+    {
+      "area": "Monitoring",
+      "title": "Visitor analytics on every page",
+      "body": "Google Analytics now records every visit, so this report shows real visitor numbers."
+    }
+  ],
+  "operations": {
+    "deployments": {
+      "succeeded": 4,
+      "total": 4
+    },
+    "runtimeErrors": {
+      "count": 0,
+      "days": 7
+    }
+  },
+  "attention": [],
+  "nextMonth": [
+    "Add a content security policy to block unwanted scripts",
+    "Count contact form enquiries correctly in Google Analytics",
+    "Limit how often the contact form can be sent",
+    "Improve the mobile menu and colour contrast for accessibility",
+    "Replace the placeholder gallery descriptions"
+  ]
+}

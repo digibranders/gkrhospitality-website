@@ -13,7 +13,7 @@ import {
 
 export default function WorkPage() {
     return (
-        <main className="bg-[#181818] pt-32 pb-20">
+        <div className="bg-[#181818] pt-32 pb-20">
             <h1 className="sr-only">Our Work</h1>
             {/* Portfolio Section - "Our Work" */}
             <div id="our-work">
@@ -26,6 +26,6 @@ export default function WorkPage() {
             <div id="trusted-by" className="bg-[#0f1115]">
                 <LogosSection />
             </div>
-        </main>
+        </div>
     );
 }
