@@ -8,7 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "vitest"
+    "test": "vitest",
+    "report": "node reports/care-report/build.ts",
+    "report:search": "node reports/care-report/fetch-search.ts"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
