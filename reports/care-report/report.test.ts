@@ -176,7 +176,7 @@ describe("parseMonth", () => {
     expect(parseMonth(month(), config).improvements).toHaveLength(4);
     const september = parseMonth(readJson("./months/2026-09.json"), config);
     expect(september.improvements).toHaveLength(4);
-    expect(september.operations.deployments).toEqual({ succeeded: 5, total: 5 });
+    expect(september.operations.deployments).toEqual({ succeeded: 6, total: 6 });
   });
 
   it("rejects em-dashes and en-dashes anywhere in the copy", () => {

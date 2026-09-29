@@ -29,7 +29,7 @@
       ]
     },
     {
-      "value": "4",
+      "value": "5",
       "label": [
         "Security headers",
         "added"
@@ -61,8 +61,8 @@
   ],
   "operations": {
     "deployments": {
-      "succeeded": 5,
-      "total": 5
+      "succeeded": 6,
+      "total": 6
     },
     "runtimeErrors": {
       "count": 0,
@@ -71,7 +71,6 @@
   },
   "attention": [],
   "nextMonth": [
-    "Add a content security policy to block unwanted scripts",
     "Count contact form enquiries correctly in Google Analytics",
     "Limit how often the contact form can be sent",
     "Improve the mobile menu and colour contrast for accessibility",
