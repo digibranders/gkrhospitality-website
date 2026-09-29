@@ -2,7 +2,7 @@
   "source": "Google Search Console",
   "property": "https://www.gkrhospitality.com/",
   "period": "2026-09",
-  "fetchedAt": "2026-09-29T09:22:35.537Z",
+  "fetchedAt": "2026-09-29T10:25:48.875Z",
   "performance": {
     "throughDate": "2026-09-26",
     "totals": {
@@ -252,7 +252,7 @@
     ]
   },
   "indexing": {
-    "checkedAt": "2026-09-29T09:22:35.537Z",
+    "checkedAt": "2026-09-29T10:25:48.874Z",
     "pagesChecked": 10,
     "pagesIndexed": 10,
     "notIndexed": []

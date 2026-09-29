@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-09-29T09:14:44.479Z",
+  "checkedAt": "2026-09-29T10:24:21.968Z",
   "site": "https://www.gkrhospitality.com",
   "tls": {
     "validTo": "2026-12-19",
@@ -13,10 +13,10 @@
   "pages": {
     "checked": 10,
     "ok": 10,
-    "averageMs": 24,
+    "averageMs": 442,
     "slowest": {
-      "path": "/",
-      "ms": 48
+      "path": "/how-we-work",
+      "ms": 508
     },
     "failing": []
   },

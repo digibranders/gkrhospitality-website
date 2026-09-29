@@ -71,8 +71,8 @@
   ],
   "operations": {
     "deployments": {
-      "succeeded": 4,
-      "total": 4
+      "succeeded": 5,
+      "total": 5
     },
     "runtimeErrors": {
       "count": 0,
