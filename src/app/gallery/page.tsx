@@ -191,13 +191,18 @@ export default function GalleryPage() {
                       {selectedItem.description}
                     </p>
 
-                    <div className="pt-6 flex gap-4 items-center">
-                      <a href={selectedItem.link} target="_blank" rel="noopener noreferrer">
-                        <Button className="bg-[#c5a059] text-[#181818] hover:bg-[#b08d4a] uppercase tracking-[0.2em] px-8 py-6 rounded-none font-bold text-xs flex items-center gap-2">
-                          Learn More <ExternalLink size={16} />
+                    {selectedItem.link && selectedItem.link !== '#' && (
+                      <div className="pt-6 flex gap-4 items-center">
+                        <Button
+                          asChild
+                          className="bg-[#c5a059] text-[#181818] hover:bg-[#b08d4a] uppercase tracking-[0.2em] px-8 py-6 rounded-none font-bold text-xs flex items-center gap-2"
+                        >
+                          <a href={selectedItem.link} target="_blank" rel="noopener noreferrer">
+                            Learn More <ExternalLink size={16} />
+                          </a>
                         </Button>
-                      </a>
-                    </div>
+                      </div>
+                    )}
                   </motion.div>
                 )}
 

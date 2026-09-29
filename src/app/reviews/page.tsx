@@ -13,7 +13,7 @@ import { TESTIMONIALS } from '@/data/homeData';
 
 export default function ReviewsPage() {
     return (
-        <main className="bg-[#181818] pt-32 pb-0">
+        <div className="bg-[#181818] pt-32 pb-0">
             <h1 className="sr-only">Reviews</h1>
             {/* Brands We've Supported */}
             <div id="trusted-by" className="bg-[#0f1115]">
@@ -29,6 +29,6 @@ export default function ReviewsPage() {
             <div id="contact">
                 <CTASection />
             </div>
-        </main>
+        </div>
     );
 }

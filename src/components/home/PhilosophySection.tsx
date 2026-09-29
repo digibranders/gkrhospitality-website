@@ -46,7 +46,7 @@ export default function PhilosophySection({ services }: PhilosophySectionProps) 
               className={`${index === services.length - 1 ? 'lg:col-start-2' : ''
                 }`}
             >
-              <Link href={`/services#${service.anchor}`} className="group block relative overflow-hidden bg-white border border-[#181818]/10 hover:border-[#c5a059] transition-all duration-500 hover:shadow-xl h-full">
+              <Link href={`/what-we-do#${service.anchor}`} className="group block relative overflow-hidden bg-white border border-[#181818]/10 hover:border-[#c5a059] transition-all duration-500 hover:shadow-xl h-full">
                 {/* Image at the top */}
                 <div className="aspect-[4/3] overflow-hidden relative">
                   <Image

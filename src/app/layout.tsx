@@ -4,6 +4,7 @@ import Navbar from '@/components/common/Navbar';
 import ScrollToTop from '@/components/common/ScrollToTop';
 
 import Footer from '@/components/common/Footer';
+import MotionProvider from '@/components/common/MotionProvider';
 import {
   GoogleTagManagerNoScript,
   GoogleTagManagerScript,
@@ -101,12 +102,13 @@ export default function RootLayout({
           Skip to Content
         </a>
 
-        {/* <MovingRibbon /> */}
-        <Navbar />
-        <main id="main-content" className="flex-grow">
-          {children}
-        </main>
-        <Footer />
+        <MotionProvider>
+          <Navbar />
+          <main id="main-content" className="flex-grow">
+            {children}
+          </main>
+          <Footer />
+        </MotionProvider>
       </body>
     </html>
   );

@@ -51,11 +51,12 @@ function ServiceCard({ service, index, total }: { service: Service; index: numbe
 
     return (
         <div
+            id={service.anchor}
             role="button"
             tabIndex={0}
             aria-expanded={isActive}
             aria-label={`View services for ${service.title}`}
-            className={`relative w-full h-[500px] overflow-hidden group shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c5a059] focus-visible:ring-offset-2 focus-visible:ring-offset-white ${index === total - 1 ? 'lg:col-start-2' : ''}`}
+            className={`relative w-full h-[500px] scroll-mt-32 overflow-hidden group shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c5a059] focus-visible:ring-offset-2 focus-visible:ring-offset-white ${index === total - 1 ? 'lg:col-start-2' : ''}`}
             onClick={() => setIsActive(!isActive)}
             onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
