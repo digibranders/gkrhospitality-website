@@ -29,20 +29,23 @@ import {
   lastDataDate,
   searchAnalyticsEndpoint,
   sitemapPaths,
-  topPagesFromRows,
-  topQueriesFromRows,
+  dailyStatsFromRows,
+  deviceStatsFromRows,
+  pageStatsFromRows,
+  queryStatsFromRows,
   totalsFromResponse,
 } from "./search-console.ts";
 import type { Indexing } from "./search-console.ts";
 
 const ROOT = fileURLToPath(new URL(".", import.meta.url));
 const PERIOD = /^\d{4}-\d{2}$/;
-const TOP_N = 5;
+/** Rows shown in each table on page 2. */
+const TABLE_ROWS = 8;
 /** Fetch more rows than we show: www and non-www URLs are merged, and zero-click rows are dropped. */
 const PAGE_ROWS = 50;
 const QUERY_ROWS = 25;
 
-type Dimension = "page" | "query" | "date";
+type Dimension = "page" | "query" | "date" | "device";
 
 function display(path: string): string {
   return relative(process.cwd(), path);
@@ -120,12 +123,13 @@ async function fetchPerformance(
   // A running month asks up to yesterday; Google only returns days it has finalised.
   const range = complete ? month : { startDate: month.startDate, endDate: yesterday(new Date()) };
   if (range.endDate < range.startDate) throw new SearchConsoleError(`${period} has no complete days yet.`);
-  const [current, previous, pages, queries, days] = await Promise.all([
+  const [current, previous, pages, queries, days, devices] = await Promise.all([
     query(token, property, range),
     query(token, property, monthRange(previousPeriod(period))),
     query(token, property, range, "page", PAGE_ROWS),
     query(token, property, range, "query", QUERY_ROWS),
     query(token, property, range, "date", 40),
+    query(token, property, range, "device", 10),
   ]);
   const totals = totalsFromResponse(current);
   if (!totals) {
@@ -138,8 +142,10 @@ async function fetchPerformance(
     throughDate: complete ? month.endDate : (lastDataDate(days) ?? range.endDate),
     totals,
     previousTotals: totalsFromResponse(previous),
-    topPages: topPagesFromRows(pages, TOP_N),
-    topQueries: topQueriesFromRows(queries, TOP_N),
+    daily: dailyStatsFromRows(days),
+    queries: queryStatsFromRows(queries, TABLE_ROWS),
+    pages: pageStatsFromRows(pages, TABLE_ROWS),
+    devices: deviceStatsFromRows(devices),
   };
 }
 
@@ -179,7 +185,7 @@ async function fetchSearch(period: string, indexingOnly: boolean, partial: boole
     const { totals, previousTotals } = performance;
     const change = previousTotals ? ` (previous month: ${previousTotals.impressions} and ${previousTotals.clicks})` : "";
     console.log(`  1 to ${performance.throughDate}: ${totals.impressions} impressions, ${totals.clicks} clicks${change}`);
-    console.log(`  ${performance.topPages.length} top pages, ${performance.topQueries.length} top queries`);
+    console.log(`  ${performance.queries.length} queries, ${performance.pages.length} pages, ${performance.daily.length} days`);
   } else {
     console.log("  Impressions and clicks: pending. Run again without --indexing-only once Google releases the month.");
   }

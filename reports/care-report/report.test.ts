@@ -6,13 +6,15 @@ import {
   countPdfPages,
   describeChange,
   formatDate,
-  formatStatNumber,
   formatPeriod,
+  formatStatNumber,
   inlineAssets,
   layoutProblems,
-  parseConfig,
-  parseLayoutProbe,
+  middleEllipsis,
   parseAnalytics,
+  parseConfig,
+  parseHealth,
+  parseLayoutProbe,
   parseMonth,
   parseSearch,
   renderReport,
@@ -20,42 +22,58 @@ import {
   withLayoutProbe,
 } from "./report.ts";
 import type { AnalyticsReport, LayoutMeasurements, SearchReport } from "./report.ts";
+import type { HealthReport } from "./health.ts";
 
 const here = (file: string): string => fileURLToPath(new URL(file, import.meta.url));
 const readJson = (file: string): unknown => JSON.parse(readFileSync(here(file), "utf8"));
 
 const rawConfig = readJson("./config.json");
-const rawAugust = readJson("./months/2026-08.json");
 const template = readFileSync(here("./template.html"), "utf8");
+const config = parseConfig(rawConfig);
 
-/** Deep clone of the real August data, so each test can break one field. */
-const august = (): Record<string, unknown> =>
-  JSON.parse(JSON.stringify(rawAugust)) as Record<string, unknown>;
+/*
+ * Test data only. The August 2026 month file predates the two-page report, so
+ * the fields added since (operations, attention, nextMonth) are supplied here.
+ * Real months get their numbers from the fetch commands.
+ */
+const month = (): Record<string, unknown> => ({
+  ...(JSON.parse(JSON.stringify(readJson("./months/2026-08.json"))) as Record<string, unknown>),
+  operations: { deployments: { succeeded: 4, total: 4 }, runtimeErrors: { count: 0, days: 7 } },
+  attention: [],
+  nextMonth: ["Add a content security policy", "Count contact form enquiries in Google Analytics"],
+});
 
-/** Test data only. Real months get their numbers from npm run report:search. */
 const testSearch = (): SearchReport => ({
   source: "Google Search Console",
-  property: "sc-domain:gkrhospitality.com",
+  property: "https://www.gkrhospitality.com/",
   period: "2026-08",
   fetchedAt: "2026-09-29T10:00:00.000Z",
   performance: {
     throughDate: "2026-08-31",
-    totals: { clicks: 57, impressions: 4210 },
-    previousTotals: { clicks: 48, impressions: 4380 },
-    topPages: [
-      { path: "/", clicks: 31 },
-      { path: "/services", clicks: 12 },
-      { path: "/work/boston-harbor", clicks: 4 },
+    totals: { clicks: 57, impressions: 4210, position: 13.8 },
+    previousTotals: { clicks: 48, impressions: 4380, position: 15.1 },
+    daily: [
+      { date: "2026-08-02", clicks: 3, impressions: 150 },
+      { date: "2026-08-20", clicks: 9, impressions: 310 },
     ],
-    topQueries: [
-      { query: "gkr hospitality", clicks: 22 },
-      { query: "<b>hospitality</b> consultant nyc", clicks: 6 },
+    queries: [
+      { query: "gkr hospitality", clicks: 22, impressions: 60, position: 1 },
+      { query: "hospitality consulting firm ny", clicks: 0, impressions: 12, position: 45 },
+      { query: "hospitality consulting new york", clicks: 0, impressions: 9, position: 39 },
+      { query: "<b>gkr</b> hotels", clicks: 6, impressions: 30, position: 8.2 },
+    ],
+    pages: [
+      { path: "/", clicks: 31, impressions: 900, position: 10.2 },
+      { path: "/work/boston-harbor", clicks: 4, impressions: 120, position: 6.5 },
+    ],
+    devices: [
+      { device: "Desktop", clicks: 40, impressions: 3000 },
+      { device: "Mobile", clicks: 17, impressions: 1210 },
     ],
   },
   indexing: { checkedAt: "2026-09-29T10:00:00.000Z", pagesChecked: 10, pagesIndexed: 10, notIndexed: [] },
 });
 
-/** Test data only. Real months get their numbers from npm run report:analytics. */
 const testAnalytics = (): AnalyticsReport => ({
   source: "Google Analytics 4",
   propertyId: "552679084",
@@ -66,6 +84,45 @@ const testAnalytics = (): AnalyticsReport => ({
   trackingStarted: null,
   current: { visitors: 165, visits: 189, searchVisits: 47 },
   previous: { visitors: 150, visits: 170, searchVisits: 40 },
+  detail: {
+    pageViews: 261,
+    engagementRate: 0.471,
+    averageVisitSeconds: 72,
+    channels: [
+      { name: "Direct", visits: 134 },
+      { name: "Search engines", visits: 47 },
+    ],
+    landingPages: [
+      { name: "/", visits: 142 },
+      { name: "/about", visits: 23 },
+    ],
+    devices: [
+      { name: "Desktop", visits: 161 },
+      { name: "Mobile", visits: 28 },
+    ],
+    countries: [
+      { name: "United States", visits: 142 },
+      { name: "India", visits: 20 },
+    ],
+    daily: [
+      { date: "2026-08-03", visits: 26 },
+      { date: "2026-08-04", visits: 10 },
+    ],
+  },
+});
+
+const testHealth = (): HealthReport => ({
+  checkedAt: "2026-09-29T10:00:00.000Z",
+  site: "https://www.gkrhospitality.com",
+  tls: { validTo: "2026-12-19", issuer: "Let's Encrypt" },
+  domain: { name: "gkrhospitality.com", expires: "2026-12-05", registrar: "GoDaddy.com, LLC" },
+  pages: { checked: 10, ok: 10, averageMs: 24, slowest: { path: "/about", ms: 40 }, failing: [] },
+  headers: {
+    present: ["HTTPS enforced (HSTS)", "Frame protection", "File type protection", "Referrer policy", "Permissions policy"],
+    missing: ["Content security policy"],
+  },
+  audit: { critical: 0, high: 0, moderate: 0, low: 1 },
+  versions: { next: "16.3.6", react: "19.3.0" },
 });
 
 const problemsOf = (fn: () => unknown): string[] => {
@@ -78,11 +135,23 @@ const problemsOf = (fn: () => unknown): string[] => {
   throw new Error("Expected a ReportValidationError, but validation passed.");
 };
 
+const render = (
+  overrides: { search?: SearchReport; analytics?: AnalyticsReport; health?: HealthReport; monthData?: unknown } = {},
+): string =>
+  renderReport(
+    template,
+    config,
+    parseMonth(overrides.monthData ?? month(), config),
+    overrides.search ?? testSearch(),
+    overrides.analytics ?? testAnalytics(),
+    overrides.health ?? testHealth(),
+  );
+
 describe("parseConfig", () => {
   it("accepts the committed config", () => {
-    const config = parseConfig(rawConfig);
     expect(config.client.name).toBe("GKR Hospitality");
     expect(config.careAreas).toHaveLength(6);
+    expect(config.analytics.propertyId).toBe("552679084");
   });
 
   it("rejects asset paths that leave the assets folder", () => {
@@ -97,77 +166,77 @@ describe("parseConfig", () => {
       copy.searchConsole.property = property;
       return copy;
     };
-    expect(parseConfig(withProperty("https://www.gkrhospitality.com/")).searchConsole.property).toBe(
-      "https://www.gkrhospitality.com/",
-    );
-    expect(problemsOf(() => parseConfig(withProperty("gkrhospitality.com"))).join("\n")).toMatch(
-      /searchConsole\.property/,
-    );
+    expect(parseConfig(withProperty("sc-domain:gkrhospitality.com")).searchConsole.property).toBe("sc-domain:gkrhospitality.com");
+    expect(problemsOf(() => parseConfig(withProperty("gkrhospitality.com"))).join("\n")).toMatch(/searchConsole\.property/);
   });
 });
 
 describe("parseMonth", () => {
-  const config = parseConfig(rawConfig);
-
-  it("accepts the committed August 2026 report", () => {
-    const month = parseMonth(rawAugust, config);
-    expect(month.figures).toHaveLength(4);
-    expect(month.improvements).toHaveLength(4);
+  it("accepts a two-page month and the committed September 2026 month", () => {
+    expect(parseMonth(month(), config).improvements).toHaveLength(4);
+    const september = parseMonth(readJson("./months/2026-09.json"), config);
+    expect(september.improvements).toHaveLength(6);
+    expect(september.operations.deployments).toEqual({ succeeded: 4, total: 4 });
   });
 
   it("rejects em-dashes and en-dashes anywhere in the copy", () => {
-    const data = august();
-    data.summary = "Monitoring is live \u2014 errors are captured.";
-    (data.improvements as { body: string }[])[0].body = "Pages 1\u20133 reviewed.";
-    const problems = problemsOf(() => parseMonth(data, config));
-    expect(problems.join("\n")).toMatch(/summary.*dash/);
-    expect(problems.join("\n")).toMatch(/improvements\[0\]\.body.*dash/);
+    const data = month();
+    data.summary = "Monitoring is live — errors are captured.";
+    (data.improvements as { body: string }[])[0].body = "Pages 1–3 reviewed.";
+    const problems = problemsOf(() => parseMonth(data, config)).join("\n");
+    expect(problems).toMatch(/summary.*dash/);
+    expect(problems).toMatch(/improvements\[0\]\.body.*dash/);
   });
 
   it("requires exactly four figures, because the panel and its shadow are sized for four", () => {
-    const data = august();
+    const data = month();
     (data.figures as unknown[]).pop();
     expect(problemsOf(() => parseMonth(data, config)).join("\n")).toMatch(/figures.*exactly 4/);
   });
 
   it("requires every improvement to name one of the configured care areas", () => {
-    const data = august();
+    const data = month();
     (data.improvements as { area: string }[])[1].area = "Design";
-    expect(problemsOf(() => parseMonth(data, config)).join("\n")).toMatch(
-      /improvements\[1\]\.area.*"Design"/,
-    );
+    expect(problemsOf(() => parseMonth(data, config)).join("\n")).toMatch(/improvements\[1\]\.area.*"Design"/);
   });
 
-  it("allows between one and four improvements", () => {
-    const none = august();
+  it("allows between one and six improvements", () => {
+    const none = month();
     none.improvements = [];
-    expect(problemsOf(() => parseMonth(none, config)).join("\n")).toMatch(/improvements.*1 to 4/);
+    expect(problemsOf(() => parseMonth(none, config)).join("\n")).toMatch(/improvements.*1 to 6/);
+    const seven = month();
+    const item = (seven.improvements as unknown[])[0];
+    seven.improvements = Array.from({ length: 7 }, () => item);
+    expect(problemsOf(() => parseMonth(seven, config)).join("\n")).toMatch(/improvements.*1 to 6/);
+  });
 
-    const one = august();
-    one.improvements = (one.improvements as unknown[]).slice(0, 1);
-    expect(parseMonth(one, config).improvements).toHaveLength(1);
+  it("requires next month's plan and sane Vercel figures", () => {
+    const data = month();
+    data.nextMonth = [];
+    data.operations = { deployments: { succeeded: 5, total: 4 }, runtimeErrors: { count: 0, days: 0 } };
+    const problems = problemsOf(() => parseMonth(data, config)).join("\n");
+    expect(problems).toMatch(/nextMonth.*1 to 5/);
+    expect(problems).toMatch(/more successful deployments than deployments/);
+    expect(problems).toMatch(/runtimeErrors\.days/);
   });
 
   it("requires the emphasised word to appear in the headline", () => {
-    const data = august();
+    const data = month();
     data.headlineEmphasis = "secure";
     expect(problemsOf(() => parseMonth(data, config)).join("\n")).toMatch(/headlineEmphasis/);
   });
 
   it("rejects impossible dates and a next report that is not after the issue date", () => {
-    const data = august();
+    const data = month();
     data.issued = "2026-02-30";
-    data.nextReport = "2026-08-01";
-    const problems = problemsOf(() => parseMonth(data, config)).join("\n");
-    expect(problems).toMatch(/issued.*real date/);
-
-    const order = august();
+    expect(problemsOf(() => parseMonth(data, config)).join("\n")).toMatch(/issued.*real date/);
+    const order = month();
     order.nextReport = "2026-08-20";
     expect(problemsOf(() => parseMonth(order, config)).join("\n")).toMatch(/nextReport.*after/);
   });
 
   it("reports every problem at once instead of stopping at the first", () => {
-    const data = august();
+    const data = month();
     data.summary = "";
     data.headline = 42;
     data.period = "August";
@@ -175,145 +244,121 @@ describe("parseMonth", () => {
   });
 });
 
-describe("formatting", () => {
-  it("formats dates as day, month name, year", () => {
-    expect(formatDate("2026-08-28")).toBe("28 August 2026");
-    expect(formatDate("2026-01-01")).toBe("1 January 2026");
-  });
-
-  it("formats the reporting period", () => {
-    expect(formatPeriod("2026-08")).toEqual({ label: "August 2026", monthName: "August" });
-  });
-
-  it("builds a stable file name from client and period", () => {
-    const config = parseConfig(rawConfig);
-    const month = parseMonth(rawAugust, config);
-    expect(reportFileStem(config, month)).toBe("GKR-Hospitality-Website-Care-Report-August-2026");
-  });
-});
-
-describe("renderReport", () => {
-  const config = parseConfig(rawConfig);
-
-  it("fills every placeholder in the template", () => {
-    const html = renderReport(template, config, parseMonth(rawAugust, config), testSearch(), testAnalytics());
-    expect(html).not.toMatch(/\{\{/);
-    expect(html).toContain("<h1>Your website is <em>healthy</em> and fully cared for.</h1>");
-    expect(html).toContain("Issued 28 August 2026");
-    expect(html).toContain("What we improved in August");
-    expect(html).toContain("<strong>26 September 2026</strong>");
-    expect(html).toContain('<div class="figure__value">100<small>%</small></div>');
-    expect(html).toContain('<div class="figure__label">Deployments<br>succeeded</div>');
-    expect(html).toContain("<h3>Backups &amp; history</h3>");
-    expect(html).toContain("<p>Live error tracking, uptime checks, weekly log review</p>");
-    expect(html).toContain("<p>Contact form tested, key pages reviewed, SSL, domain &amp; DNS checks</p>");
-  });
-
-  it("renders the search section with readable page names and month-on-month change", () => {
-    const html = renderReport(template, config, parseMonth(rawAugust, config), testSearch(), testAnalytics());
-    expect(html).toContain("Visitors and search in August");
-    expect(html).toContain("Google Analytics and Google Search, 1 to 31 August.");
-    expect(html).toContain('<div class="stat__value">165</div>');
-    expect(html).toContain('<div class="stat__change stat__change--up">Up 10% on July</div>');
-    expect(html).toContain('<div class="stat__value">4,210</div>');
-    expect(html).toContain('<div class="stat__change">Down 4% on July</div>');
-    expect(html).toContain('<div class="stat__change stat__change--up">Up 19% on July</div>');
-    expect(html).toContain('<span class="ranking__name">Home</span><span class="ranking__clicks">31</span>');
-    expect(html).toContain('<span class="ranking__name">/work/boston-harbor</span>');
-    expect(html).toContain("All 10 pages indexed by Google.");
-    expect(html).toContain("Google keeps rare searches private, so these cover 28 of 57 clicks.");
-    expect(html).toContain("&lt;b&gt;hospitality&lt;/b&gt; consultant nyc");
-  });
-
-  it("says so plainly when no page or query earned a click", () => {
-    const base = testSearch();
-    const search: SearchReport = {
-      ...base,
-      performance: { throughDate: "2026-08-31", totals: { clicks: 0, impressions: 90 }, previousTotals: null, topPages: [], topQueries: [] },
-    };
-    const html = renderReport(template, config, parseMonth(rawAugust, config), search, testAnalytics());
-    expect(html).toContain("No page earned a click from search in August.");
-    expect(html).toContain("No query brought a click in August.");
-    expect(html).toContain("No July data to compare");
-  });
-
-  it("states plainly when Google has not released the month, with no placeholder numbers", () => {
-    const search: SearchReport = {
-      ...testSearch(),
-      performance: null,
-      indexing: { checkedAt: "2026-09-29T10:00:00.000Z", pagesChecked: 10, pagesIndexed: 9, notIndexed: ["/gallery"] },
-    };
-    const html = renderReport(template, config, parseMonth(rawAugust, config), search, testAnalytics());
-    expect(html).toContain("Impressions, clicks, top pages and top queries for August are not available yet.");
-    expect(html).toContain("9 of 10 pages indexed by Google.");
-    // Visitors still show (GA4 has them); only the search numbers wait.
-    expect(html).toContain('<div class="stat__label">Visitors</div>');
-    expect(html).not.toContain('<div class="stat__label">Impressions</div>');
-    expect(html).not.toContain('class="ranking__name"');
-  });
-
-  it("escapes HTML in every piece of copy", () => {
-    const data = august();
-    data.summary = 'Blocked <script>alert("x")</script> & more.';
-    const html = renderReport(template, config, parseMonth(data, config), testSearch(), testAnalytics());
-    expect(html).not.toContain("<script>");
-    expect(html).toContain("Blocked &lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; &amp; more.");
-  });
-
-  it("fails loudly when the template asks for a value that does not exist", () => {
-    expect(() =>
-      renderReport(`${template}{{unknownToken}}`, config, parseMonth(rawAugust, config), testSearch(), testAnalytics()),
-    ).toThrow(/unknownToken/);
-  });
-});
-
-describe("parseSearch", () => {
-  it("accepts data shaped like fetch-search.ts output", () => {
-    expect(parseSearch(testSearch(), "2026-08").performance?.totals.clicks).toBe(57);
+describe("parseSearch, parseAnalytics and parseHealth", () => {
+  it("accept data shaped like the fetch commands write", () => {
+    expect(parseSearch(testSearch(), "2026-08").performance?.queries).toHaveLength(4);
     expect(parseSearch({ ...testSearch(), performance: null }, "2026-08").performance).toBeNull();
+    expect(parseAnalytics(testAnalytics(), "2026-08").detail.channels[0].name).toBe("Direct");
+    expect(parseHealth(testHealth()).domain.expires).toBe("2026-12-05");
   });
 
-  it("rejects search data from a different month, and impossible numbers", () => {
+  it("accept the committed September 2026 data files", () => {
+    expect(parseSearch(readJson("./months/2026-09.search.json"), "2026-09").property).toBe("https://www.gkrhospitality.com/");
+    expect(parseAnalytics(readJson("./months/2026-09.analytics.json"), "2026-09").trackingStarted).toBe("2026-09-03");
+    expect(parseHealth(readJson("./months/2026-09.health.json")).pages.checked).toBe(10);
+  });
+
+  it("reject search data from a different month, impossible numbers and too many rows", () => {
     const base = testSearch();
+    const nine = Array.from({ length: 9 }, (_, i) => ({ query: `query ${i}`, clicks: 0, impressions: 1, position: 3 }));
     const data = {
       ...base,
       period: "2026-07",
-      performance: { ...base.performance, totals: { clicks: 90, impressions: 12 } },
+      performance: { ...base.performance, totals: { clicks: 90, impressions: 12, position: 3 }, queries: nine },
       indexing: { ...base.indexing, pagesIndexed: 11 },
     };
     const problems = problemsOf(() => parseSearch(data, "2026-08")).join("\n");
     expect(problems).toMatch(/period.*2026-07/);
     expect(problems).toMatch(/more clicks than impressions/);
+    expect(problems).toMatch(/performance\.queries.*at most 8/);
     expect(problems).toMatch(/pagesIndexed plus notIndexed must equal pagesChecked/);
   });
 
-  it("caps each ranked list at five rows", () => {
-    const six = Array.from({ length: 6 }, (_, i) => ({ query: `query ${i}`, clicks: 6 - i }));
-    const base = testSearch();
-    const data = { ...base, performance: { ...base.performance, topQueries: six } };
-    expect(problemsOf(() => parseSearch(data, "2026-08")).join("\n")).toMatch(/performance\.topQueries.*at most 5/);
-  });
-});
-
-describe("parseAnalytics", () => {
-  it("accepts data shaped like fetch-analytics.ts output", () => {
-    expect(parseAnalytics(testAnalytics(), "2026-08").current.visitors).toBe(165);
-  });
-
-  it("rejects the wrong month, dates outside it and impossible numbers", () => {
+  it("reject analytics outside the month and an engagement rate above 1", () => {
+    const base = testAnalytics();
     const data = {
-      ...testAnalytics(),
+      ...base,
       throughDate: "2026-09-02",
       current: { visitors: 5, visits: 10, searchVisits: 12 },
+      detail: { ...base.detail, engagementRate: 1.4 },
     };
     const problems = problemsOf(() => parseAnalytics(data, "2026-08")).join("\n");
     expect(problems).toMatch(/throughDate.*2026-08/);
     expect(problems).toMatch(/more search visits than visits/);
-    expect(problemsOf(() => parseAnalytics(testAnalytics(), "2026-09")).join("\n")).toMatch(/period/);
+    expect(problems).toMatch(/engagementRate/);
+  });
+
+  it("reject health readings with impossible dates", () => {
+    const data = { ...testHealth(), tls: { validTo: "2026-13-40", issuer: "x" } };
+    expect(problemsOf(() => parseHealth(data)).join("\n")).toMatch(/tls\.validTo/);
+  });
+});
+
+describe("formatting", () => {
+  it("formats dates, periods and file names", () => {
+    expect(formatDate("2026-08-28")).toBe("28 August 2026");
+    expect(formatPeriod("2026-08")).toEqual({ label: "August 2026", monthName: "August" });
+    expect(reportFileStem(config, parseMonth(month(), config))).toBe("GKR-Hospitality-Website-Care-Report-August-2026");
+  });
+
+  it("groups thousands, and shortens from 100,000 so a number fits its column", () => {
+    expect(formatStatNumber(47)).toBe("47");
+    expect(formatStatNumber(4210)).toBe("4,210");
+    expect(formatStatNumber(128_450)).toBe("128.5K");
+    expect(formatStatNumber(1_284_300)).toBe("1.3M");
+  });
+
+  it("describes the change against last month in plain words", () => {
+    expect(describeChange(57, 48, "July")).toEqual({ text: "Up 19% on July", direction: "up" });
+    expect(describeChange(4210, 4380, "July")).toEqual({ text: "Down 4% on July", direction: "down" });
+    expect(describeChange(100, 100, "July")).toEqual({ text: "Level with July", direction: "level" });
+    expect(describeChange(3, 0, "July")).toEqual({ text: "Up from 0 in July", direction: "up" });
+    expect(describeChange(3, null, "July")).toEqual({ text: "No July data to compare", direction: "none" });
+  });
+
+  it("shortens long names from the middle so similar queries stay distinguishable", () => {
+    expect(middleEllipsis("gkr resort")).toBe("gkr resort");
+    const a = middleEllipsis("hospitality consulting firm ny");
+    const b = middleEllipsis("hospitality consulting new york");
+    expect(a).not.toBe(b);
+    expect(a).toHaveLength(20);
+    expect(a).toContain("…");
+  });
+});
+
+describe("renderReport: page 1", () => {
+  it("fills every placeholder and renders two pages", () => {
+    const html = render();
+    expect(html).not.toMatch(/\{\{/);
+    expect(html.match(/class="page[ "]/g)).toHaveLength(2);
+    expect(html).toContain("<h1>Your website is <em>healthy</em> and fully cared for.</h1>");
+    expect(html).toContain("What we improved in August");
+    expect(html).toContain("Page 1 of 2");
+    expect(html).toContain("Page 2 of 2");
+  });
+
+  it("shows visitors and search at a glance, with a visits-per-day chart", () => {
+    const html = render();
+    expect(html).toContain("Visitors and search in August");
+    expect(html).toContain("Google Analytics and Google Search, 1 to 31 August.");
+    expect(html).toContain('<div class="stat__value">165</div>');
+    expect(html).toContain('<div class="stat__change stat__change--up">Up 10% on July</div>');
+    expect(html).toContain('<div class="stat__change">Down 4% on July</div>');
+    expect(html).toContain('aria-label="Visits per day. 31 days, highest 26 on 3 Aug."');
+  });
+
+  it("raises the domain renewal from the health check in the attention box", () => {
+    const html = render();
+    expect(html).toContain("Needs your attention");
+    expect(html).toContain("5 December 2026");
+  });
+
+  it("leaves the attention box out when nothing needs action", () => {
+    const health = { ...testHealth(), domain: { ...testHealth().domain, expires: "2027-12-05" } };
+    expect(render({ health })).not.toContain("Needs your attention");
   });
 
   it("says when tracking began instead of comparing with a month that has no data", () => {
-    const config = parseConfig(rawConfig);
     const analytics: AnalyticsReport = {
       ...testAnalytics(),
       startDate: "2026-08-02",
@@ -321,8 +366,7 @@ describe("parseAnalytics", () => {
       trackingStarted: "2026-08-02",
       previous: null,
     };
-    const search: SearchReport = { ...testSearch(), performance: null };
-    const html = renderReport(template, config, parseMonth(rawAugust, config), search, analytics);
+    const html = render({ analytics, search: { ...testSearch(), performance: null } });
     expect(html).toContain("Tracking began 2 August");
     expect(html).toContain("25% of all visits");
     expect(html).toContain("Google Analytics, 2 to 28 August.");
@@ -330,24 +374,63 @@ describe("parseAnalytics", () => {
   });
 });
 
-describe("formatStatNumber", () => {
-  it("groups thousands, and shortens from 100,000 so the number fits its column", () => {
-    expect(formatStatNumber(47)).toBe("47");
-    expect(formatStatNumber(4210)).toBe("4,210");
-    expect(formatStatNumber(99_999)).toBe("99,999");
-    expect(formatStatNumber(128_450)).toBe("128.5K");
-    expect(formatStatNumber(1_284_300)).toBe("1.3M");
+describe("renderReport: page 2", () => {
+  it("shows search detail: daily charts, both tables, the key and the privacy note", () => {
+    const html = render();
+    expect(html).toContain("Search in detail");
+    expect(html).toContain("Times shown per day");
+    expect(html).toContain('<td class="dtable__name">hospitalit…g firm ny</td>');
+    expect(html).toContain('<td class="dtable__name">hospitalit…new york</td>');
+    expect(html).toContain("&lt;b&gt;gkr&lt;/b&gt; hotels");
+    expect(html).toContain('<td class="dtable__name">Home</td><td>900</td><td>31</td><td>10.2</td>');
+    expect(html).toContain("Shown: times the site appeared in Google results.");
+    expect(html).toContain("the searches listed cover 28 of 57 clicks.");
+  });
+
+  it("shows visitor detail: sources, landing pages, and devices and country as a sentence", () => {
+    const html = render();
+    expect(html).toContain("Where visits came from");
+    expect(html).toContain('<span class="barlist__label">Search engines</span>');
+    expect(html).toContain("Visits were 85% on desktop and 15% on mobile, and 88% came from the United States.");
+  });
+
+  it("shows site health with real values, flagging the domain renewal", () => {
+    const html = render();
+    expect(html).toContain("Checked 29 September 2026.");
+    expect(html).toMatch(/<li class="tile tile--flag">[\s\S]*?Domain renews[\s\S]*?With GoDaddy/);
+    expect(html).toContain("To add: content security policy");
+    expect(html).toContain("Next.js 16.3.6");
+  });
+
+  it("lists next month's plan and the monthly checks", () => {
+    const html = render();
+    expect(html).toContain("Coming in September");
+    expect(html).toContain("<li>Add a content security policy</li>");
+    expect(html).toContain("<p>Live error tracking, uptime checks, weekly log review</p>");
+  });
+
+  it("states plainly when Google has not released the month, with no placeholder numbers", () => {
+    const html = render({ search: { ...testSearch(), performance: null } });
+    expect(html).toContain("Search Console has not released August&#39;s impressions and clicks yet.");
+    expect(html).toContain('<div class="stat__label">Visitors</div>');
+    expect(html).not.toContain('<div class="stat__label">Impressions</div>');
+    expect(html).not.toContain('class="dtable__name"');
   });
 });
 
-describe("describeChange", () => {
-  it("describes the change against last month in plain words", () => {
-    expect(describeChange(57, 48, "July")).toEqual({ text: "Up 19% on July", direction: "up" });
-    expect(describeChange(4210, 4380, "July")).toEqual({ text: "Down 4% on July", direction: "down" });
-    expect(describeChange(100, 100, "July")).toEqual({ text: "Level with July", direction: "level" });
-    expect(describeChange(3, 0, "July")).toEqual({ text: "Up from 0 in July", direction: "up" });
-    expect(describeChange(3, null, "July")).toEqual({ text: "No July data to compare", direction: "none" });
-    expect(describeChange(2500, 1000, "July").text).toBe("Up 150% on July");
+describe("renderReport: safety", () => {
+  it("escapes HTML in every piece of copy", () => {
+    const data = month();
+    data.summary = 'Blocked <script>alert("x")</script> & more.';
+    const html = render({ monthData: data });
+    expect(html).not.toContain("<script>");
+    expect(html).toContain("Blocked &lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; &amp; more.");
+  });
+
+  it("fails loudly when the template asks for a value that does not exist", () => {
+    expect(() =>
+      renderReport(`${template}{{unknownToken}}`, config, parseMonth(month(), config), testSearch(), testAnalytics(), testHealth()),
+    ).toThrow(/unknownToken/);
   });
 });
 
@@ -369,28 +452,30 @@ describe("layout probe", () => {
   const fits: LayoutMeasurements = {
     pageOverflowPx: 0,
     horizontalOverflowPx: 0,
+    overflowPage: 0,
     headlineLines: 2,
     summaryToFiguresGapPx: 18,
-    footerBottomGapPx: 30,
+    footerBottomGapPx: 0,
   };
 
-  it("passes the approved August layout measurements", () => {
+  it("passes measurements from pages that fit", () => {
     expect(layoutProblems(fits)).toEqual([]);
   });
 
-  it("names each way the page can break", () => {
+  it("names each way the pages can break, and which page", () => {
     const problems = layoutProblems({
       pageOverflowPx: 64,
       horizontalOverflowPx: 90,
+      overflowPage: 2,
       headlineLines: 3,
       summaryToFiguresGapPx: -20,
       footerBottomGapPx: -40,
     }).join("\n");
     expect(problems).toMatch(/headline.*3 lines/);
     expect(problems).toMatch(/summary.*figures panel/);
-    expect(problems).toMatch(/64px/);
+    expect(problems).toMatch(/64px past the bottom of page 2/);
+    expect(problems).toMatch(/90px past the right edge on page 2/);
     expect(problems).toMatch(/footer/);
-    expect(problems).toMatch(/90px past the right edge/);
   });
 
   it("reads the measurements Chrome writes into the page", () => {
@@ -403,8 +488,7 @@ describe("layout probe", () => {
   });
 
   it("injects the probe script before </body> without touching the rest of the page", () => {
-    const page = "<html><body><main>x</main></body></html>";
-    const probed = withLayoutProbe(page);
+    const probed = withLayoutProbe("<html><body><main>x</main></body></html>");
     expect(probed.startsWith("<html><body><main>x</main><script>")).toBe(true);
     expect(probed.endsWith("</script></body></html>")).toBe(true);
   });

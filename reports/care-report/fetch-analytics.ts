@@ -17,7 +17,12 @@ import {
   FINAL_DATA_LAG_DAYS,
   SEARCH_CHANNEL,
   channelSessions,
+  channelsFromReport,
+  dailyVisitsFromReport,
+  engagementFromReport,
   firstDataDate,
+  landingPagesFromReport,
+  rankedFromReport,
   runReportEndpoint,
   totalsFromReport,
 } from "./analytics.ts";
@@ -26,6 +31,7 @@ import { accessToken } from "./google-client.ts";
 import { isMonthComplete, monthRange, previousPeriod, yesterday } from "./periods.ts";
 import { parseAnalytics, parseConfig } from "./report.ts";
 import type { AnalyticsReport, VisitorFigures } from "./report.ts";
+import type { VisitorDetail } from "./analytics.ts";
 
 const ROOT = fileURLToPath(new URL(".", import.meta.url));
 const PERIOD = /^\d{4}-\d{2}$/;
@@ -64,6 +70,35 @@ async function figuresFor(token: string, propertyId: string, range: Range): Prom
   return base ? { ...base, searchVisits: channelSessions(channels, SEARCH_CHANNEL) } : null;
 }
 
+/** Page 2 detail: sources, landing pages, devices, countries, engagement and visits per day. */
+async function detailFor(token: string, propertyId: string, range: Range): Promise<VisitorDetail> {
+  const by = (dimension: string, limit?: number): object => ({
+    dateRanges: [range],
+    dimensions: [{ name: dimension }],
+    metrics: [{ name: "sessions" }],
+    ...(limit ? { limit } : {}),
+  });
+  const [engagement, channels, landing, devices, countries, days] = await Promise.all([
+    runReport(token, propertyId, {
+      dateRanges: [range],
+      metrics: [{ name: "screenPageViews" }, { name: "engagementRate" }, { name: "averageSessionDuration" }],
+    }),
+    runReport(token, propertyId, by("sessionDefaultChannelGroup")),
+    runReport(token, propertyId, by("landingPage", 25)),
+    runReport(token, propertyId, by("deviceCategory")),
+    runReport(token, propertyId, by("country", 10)),
+    runReport(token, propertyId, by("date")),
+  ]);
+  return {
+    ...engagementFromReport(engagement),
+    channels: channelsFromReport(channels),
+    landingPages: landingPagesFromReport(landing, 6),
+    devices: rankedFromReport(devices, 3),
+    countries: rankedFromReport(countries, 4),
+    daily: dailyVisitsFromReport(days),
+  };
+}
+
 async function fetchAnalytics(period: string, partial: boolean): Promise<void> {
   if (!PERIOD.test(period)) {
     throw new AnalyticsError(`Pass the month as YYYY-MM, for example: npm run report:analytics -- 2026-09 (got "${period}")`);
@@ -85,10 +120,11 @@ async function fetchAnalytics(period: string, partial: boolean): Promise<void> {
   const token = await accessToken(SCOPES.analytics);
 
   const current: Range = { startDate: month.startDate, endDate: throughDate };
-  const [currentFigures, previousFigures, days] = await Promise.all([
+  const [currentFigures, previousFigures, days, detail] = await Promise.all([
     figuresFor(token, propertyId, current),
     figuresFor(token, propertyId, monthRange(previousPeriod(period))),
     runReport(token, propertyId, { dateRanges: [current], dimensions: [{ name: "date" }], metrics: [{ name: "sessions" }] }),
+    detailFor(token, propertyId, current),
   ]);
   if (!currentFigures) {
     throw new AnalyticsError(`GA4 property ${propertyId} has no visits between ${current.startDate} and ${current.endDate}.`);
@@ -106,6 +142,7 @@ async function fetchAnalytics(period: string, partial: boolean): Promise<void> {
     trackingStarted,
     current: currentFigures,
     previous: previousFigures,
+    detail,
   };
   parseAnalytics(report, period, "fetched analytics data");
 

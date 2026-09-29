@@ -1,5 +1,5 @@
 /**
- * Builds one monthly care report: HTML and a one-page PDF.
+ * Builds one monthly care report: HTML and a two-page PDF.
  *
  *   npm run report -- 2026-08
  *
@@ -7,7 +7,7 @@
  * months/<period>.search.json (from npm run report:search), renders template.html, inlines
  * every asset so the HTML is a single portable file, measures the layout in
  * headless Chrome, then prints the PDF. Fails if any copy overflows its slot
- * or the PDF is not exactly one page.
+ * or the PDF is not exactly two pages.
  *
  * Runs on Node's built-in TypeScript support (Node 23.6+), no extra packages.
  * Set CHROME_PATH to use a specific Chrome or Chromium binary.
@@ -23,6 +23,7 @@ import {
   parseConfig,
   parseLayoutProbe,
   parseAnalytics,
+  parseHealth,
   parseMonth,
   parseSearch,
   renderReport,
@@ -35,6 +36,8 @@ const MONTHS_DIR = join(ROOT, "months");
 const OUTPUT_DIR = join(ROOT, "output");
 const PERIOD = /^\d{4}-\d{2}$/;
 const CHROME_TIMEOUT_MS = 60_000;
+/** The report is two US Letter pages: the story, then the detail. */
+const PAGE_COUNT = 2;
 
 const CHROME_CANDIDATES = [
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
@@ -166,8 +169,14 @@ function build(period: string): void {
   }
   const analytics = parseAnalytics(readJson(analyticsPath), period, `months/${period}.analytics.json`);
 
+  const healthPath = join(MONTHS_DIR, `${period}.health.json`);
+  if (!existsSync(healthPath)) {
+    throw new BuildError(`No site health readings for ${period}. Run: npm run report:health -- ${period}`);
+  }
+  const health = parseHealth(readJson(healthPath), `months/${period}.health.json`);
+
   const template = readFileSync(join(ROOT, "template.html"), "utf8");
-  const html = inlineAssets(renderReport(template, config, month, search, analytics), (assetPath) => {
+  const html = inlineAssets(renderReport(template, config, month, search, analytics, health), (assetPath) => {
     const file = join(ROOT, assetPath);
     if (!existsSync(file)) throw new BuildError(`Missing asset: reports/care-report/${assetPath}`);
     return readFileSync(file).toString("base64");
@@ -187,8 +196,8 @@ function build(period: string): void {
 
   if (!existsSync(pdfPath)) throw new BuildError("Chrome exited without writing a PDF.");
   const pages = countPdfPages(readFileSync(pdfPath).toString("latin1"));
-  if (pages !== 1) {
-    throw new BuildError(`The PDF is ${pages} pages; it must be 1. Check template.html for changes to the page size.`);
+  if (pages !== PAGE_COUNT) {
+    throw new BuildError(`The PDF is ${pages} pages; it must be ${PAGE_COUNT}. Check template.html for changes to the page size.`);
   }
 
   console.log(`Built ${formatRelative(pdfPath)}`);

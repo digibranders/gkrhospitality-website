@@ -81,3 +81,100 @@ export function firstDataDate(response: unknown): string | null {
   const first = days[0];
   return first ? `${first.slice(0, 4)}-${first.slice(4, 6)}-${first.slice(6, 8)}` : null;
 }
+
+/* ------------------------------------------------------------------ */
+/* Detail for page 2                                                   */
+/* ------------------------------------------------------------------ */
+
+export interface Ranked {
+  name: string;
+  visits: number;
+}
+
+export interface VisitorDetail {
+  pageViews: number;
+  /** Share of visits GA4 counts as engaged, 0 to 1, three decimals. */
+  engagementRate: number;
+  averageVisitSeconds: number;
+  channels: Ranked[];
+  landingPages: Ranked[];
+  devices: Ranked[];
+  countries: Ranked[];
+  /** Visits per day, YYYY-MM-DD, in date order. */
+  daily: { date: string; visits: number }[];
+}
+
+/** pageViews, engagementRate and averageSessionDuration, from a report with those three metrics. */
+export function engagementFromReport(response: unknown): Pick<VisitorDetail, "pageViews" | "engagementRate" | "averageVisitSeconds"> {
+  const [row] = readRows(response);
+  const [pageViews = 0, rate = 0, seconds = 0] = row ? row.metrics : [];
+  return { pageViews, engagementRate: Math.round(rate * 1000) / 1000, averageVisitSeconds: Math.round(seconds) };
+}
+
+/** GA4's default channel groups, in plain words for a client report. */
+const CHANNEL_NAMES: Record<string, string> = {
+  Direct: "Direct",
+  "Organic Search": "Search engines",
+  "Paid Search": "Search ads",
+  Referral: "Other websites",
+  "Organic Social": "Social media",
+  "Paid Social": "Social media",
+  Email: "Email",
+};
+
+/** Visits by channel, merged into plain-language groups, largest first, with anything unnamed as "Other". */
+export function channelsFromReport(response: unknown): Ranked[] {
+  const totals: Record<string, number> = {};
+  for (const row of readRows(response)) {
+    const name = CHANNEL_NAMES[row.dimensions[0]] ?? "Other";
+    totals[name] = (totals[name] ?? 0) + row.metrics[0];
+  }
+  return rankedFrom(totals, Number.POSITIVE_INFINITY);
+}
+
+/**
+ * Landing pages that are real pages. GA4 also records the sitemap, "(not set)"
+ * and empty paths when a bot or a broken session lands; those are left out.
+ */
+export function landingPagesFromReport(response: unknown, limit: number): Ranked[] {
+  const totals: Record<string, number> = {};
+  for (const row of readRows(response)) {
+    const raw = row.dimensions[0] ?? "";
+    const path = raw.split(/[?#]/)[0];
+    if (!path.startsWith("/") || /\.[a-z0-9]+$/i.test(path)) continue;
+    const clean = path.length > 1 ? path.replace(/\/+$/, "") : "/";
+    totals[clean] = (totals[clean] ?? 0) + row.metrics[0];
+  }
+  return rankedFrom(totals, limit);
+}
+
+/** Visits for a plain dimension (device, country), largest first; "(not set)" folds into "Other". */
+export function rankedFromReport(response: unknown, limit: number): Ranked[] {
+  const totals: Record<string, number> = {};
+  for (const row of readRows(response)) {
+    const raw = row.dimensions[0] ?? "";
+    const name = raw === "" || raw === "(not set)" ? "Other" : raw.charAt(0).toUpperCase() + raw.slice(1);
+    totals[name] = (totals[name] ?? 0) + row.metrics[0];
+  }
+  return rankedFrom(totals, limit);
+}
+
+/** Visits per day from a report with the date dimension (YYYYMMDD). */
+export function dailyVisitsFromReport(response: unknown): { date: string; visits: number }[] {
+  return readRows(response)
+    .filter((row) => /^\d{8}$/.test(row.dimensions[0]))
+    .map((row) => {
+      const d = row.dimensions[0];
+      return { date: `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`, visits: row.metrics[0] };
+    })
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** Largest first, alphabetical on ties, "Other" always last; zero rows dropped. */
+function rankedFrom(totals: Record<string, number>, limit: number): Ranked[] {
+  const ranked = Object.keys(totals)
+    .filter((name) => totals[name] > 0)
+    .map((name) => ({ name, visits: totals[name] }))
+    .sort((a, b) => Number(a.name === "Other") - Number(b.name === "Other") || b.visits - a.visits || a.name.localeCompare(b.name));
+  return ranked.slice(0, limit);
+}

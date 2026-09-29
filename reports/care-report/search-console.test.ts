@@ -4,9 +4,11 @@ import {
   indexingFromInspections,
   lastDataDate,
   searchAnalyticsEndpoint,
+  dailyStatsFromRows,
+  deviceStatsFromRows,
+  pageStatsFromRows,
+  queryStatsFromRows,
   sitemapPaths,
-  topPagesFromRows,
-  topQueriesFromRows,
   totalsFromResponse,
 } from "./search-console.ts";
 
@@ -17,47 +19,65 @@ describe("Search Console responses", () => {
     );
   });
 
-  it("reads totals, and reports no data as null rather than zero", () => {
-    expect(totalsFromResponse({ rows: [{ clicks: 41, impressions: 3912, ctr: 0.01, position: 18.2 }] })).toEqual({
-      clicks: 41,
-      impressions: 3912,
+  it("reads totals with average position, and reports no data as null rather than zero", () => {
+    expect(totalsFromResponse({ rows: [{ clicks: 24, impressions: 117, ctr: 0.2, position: 13.811 }] })).toEqual({
+      clicks: 24,
+      impressions: 117,
+      position: 13.8,
     });
     expect(totalsFromResponse({})).toBeNull();
     expect(totalsFromResponse({ rows: [] })).toBeNull();
   });
 
-  it("merges www and non-www URLs for the same page, drops pages without clicks, and ranks by clicks", () => {
+  it("merges www and non-www URLs, weights position by impressions, and keeps pages seen but not clicked", () => {
     const rows = [
-      { keys: ["https://www.gkrhospitality.com/"], clicks: 20, impressions: 900 },
-      { keys: ["https://www.gkrhospitality.com/services"], clicks: 9, impressions: 300 },
-      { keys: ["https://gkrhospitality.com/"], clicks: 4, impressions: 80 },
-      { keys: ["https://www.gkrhospitality.com/work/"], clicks: 9, impressions: 120 },
-      { keys: ["https://www.gkrhospitality.com/contact?ref=x"], clicks: 2, impressions: 40 },
-      { keys: ["https://www.gkrhospitality.com/privacy-policy"], clicks: 0, impressions: 60 },
+      { keys: ["https://www.gkrhospitality.com/"], clicks: 10, impressions: 30, position: 10 },
+      { keys: ["https://gkrhospitality.com/"], clicks: 1, impressions: 10, position: 2 },
+      { keys: ["https://www.gkrhospitality.com/about/"], clicks: 13, impressions: 64, position: 3.1 },
+      { keys: ["https://www.gkrhospitality.com/contact?ref=x"], clicks: 0, impressions: 36, position: 25.3 },
+      { keys: ["https://www.gkrhospitality.com/work"], clicks: 0, impressions: 0, position: 0 },
     ];
-    expect(topPagesFromRows(rows, 5)).toEqual([
-      { path: "/", clicks: 24 },
-      { path: "/services", clicks: 9 },
-      { path: "/work", clicks: 9 },
-      { path: "/contact", clicks: 2 },
+    expect(pageStatsFromRows(rows, 5)).toEqual([
+      { path: "/about", clicks: 13, impressions: 64, position: 3.1 },
+      { path: "/", clicks: 11, impressions: 40, position: 8 },
+      { path: "/contact", clicks: 0, impressions: 36, position: 25.3 },
     ]);
-    expect(topPagesFromRows(rows, 2)).toHaveLength(2);
+    expect(pageStatsFromRows(rows, 1)).toHaveLength(1);
   });
 
-  it("keeps the top queries that brought clicks", () => {
+  it("keeps queries seen without clicks, ranked by clicks then impressions", () => {
     const rows = [
-      { keys: ["gkr hospitality"], clicks: 14, impressions: 60 },
-      { keys: ["hospitality consulting new york"], clicks: 3, impressions: 410 },
-      { keys: ["hotel operator consultant"], clicks: 0, impressions: 95 },
+      { keys: ["gkr resort"], clicks: 0, impressions: 1, position: 9 },
+      { keys: ["garrett ronan"], clicks: 4, impressions: 6, position: 1 },
+      { keys: ["albany ny restaurant consultant"], clicks: 0, impressions: 3, position: 78 },
     ];
-    expect(topQueriesFromRows(rows, 5)).toEqual([
-      { query: "gkr hospitality", clicks: 14 },
-      { query: "hospitality consulting new york", clicks: 3 },
+    expect(queryStatsFromRows(rows, 5).map((q) => q.query)).toEqual([
+      "garrett ronan",
+      "albany ny restaurant consultant",
+      "gkr resort",
+    ]);
+  });
+
+  it("orders daily stats by date and names devices", () => {
+    expect(
+      dailyStatsFromRows([
+        { keys: ["2026-09-03"], clicks: 0, impressions: 6, position: 27 },
+        { keys: ["2026-09-02"], clicks: 1, impressions: 7, position: 9 },
+      ]).map((d) => d.date),
+    ).toEqual(["2026-09-02", "2026-09-03"]);
+    expect(
+      deviceStatsFromRows([
+        { keys: ["MOBILE"], clicks: 7, impressions: 37, position: 4.8 },
+        { keys: ["DESKTOP"], clicks: 17, impressions: 80, position: 18 },
+      ]),
+    ).toEqual([
+      { device: "Desktop", clicks: 17, impressions: 80 },
+      { device: "Mobile", clicks: 7, impressions: 37 },
     ]);
   });
 
   it("rejects responses that are not shaped like Search Console rows", () => {
-    expect(() => topQueriesFromRows([{ keys: "gkr", clicks: 1 }], 5)).toThrow(SearchConsoleError);
+    expect(() => queryStatsFromRows([{ keys: "gkr", clicks: 1 }], 5)).toThrow(SearchConsoleError);
   });
 });
 

@@ -14,12 +14,15 @@
   }
   /*
     Fynix monthly care report.
-    One US Letter page, rendered to PDF by build.ts through headless Chrome.
+    Two US Letter pages, rendered to PDF by build.ts through headless Chrome.
+    Page 1 is the story (verdict, work done, visitors at a glance, anything
+    that needs the client). Page 2 is the evidence behind it.
     Content comes from months/YYYY-MM.json and config.json; see README.md.
     Asset paths (assets/...) are inlined as data URIs at build time.
     Palette: Fynix navy + a single copper accent taken from the client logo.
-    Page bands encode meaning: navy = verdict, white = this month (work done,
-    then search results), stone = every month.
+    Bands encode meaning: navy = verdict and page header, white = this
+    month, stone = standing care and plans.
+    Charts: one copper mark colour (#B07A55), text always in ink tokens.
   */
   :root {
     --navy: #0C1E2E;
@@ -68,7 +71,9 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    break-after: page;
   }
+  .page:last-child { break-after: auto; }
 
   @media print {
     html, body { background: var(--paper); }
@@ -209,7 +214,7 @@
   .figure__value {
     font-size: 40px;
     line-height: 1;
-    font-weight: 300;
+    font-weight: 400;
     letter-spacing: -0.03em;
     color: var(--navy);
   }
@@ -271,7 +276,7 @@
   .change:nth-child(-n + 2) { padding-top: 2px; border-top: 0; }
 
   .change__area {
-    font-size: 10px;
+    font-size: 10.5px;
     font-weight: 600;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -317,13 +322,13 @@
     row-gap: 10px;
     align-content: start;
   }
-  .ranking,
   .search__pending { grid-column: span 2; }
+  .glance__chart { grid-column: 1 / -1; margin-top: 2px; }
 
   .stat__value {
     font-size: 26px;
     line-height: 1;
-    font-weight: 300;
+    font-weight: 500;
     letter-spacing: -0.03em;
     color: var(--navy);
   }
@@ -342,33 +347,6 @@
   }
   .stat__change--up { color: var(--copper); font-weight: 500; }
 
-  .ranking h3 {
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--hairline);
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--navy);
-  }
-  .ranking ol { list-style: none; margin-top: 4px; }
-  .ranking li {
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    font-size: 11.5px;
-    line-height: 1.5;
-    color: var(--ink);
-  }
-  .ranking__name {
-    min-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-  .ranking__clicks {
-    flex: none;
-    font-weight: 600;
-    color: var(--navy);
-  }
   .search__indexing {
     margin-top: 4px;
     font-weight: 600;
@@ -383,35 +361,6 @@
     line-height: 1.5;
     color: var(--ink);
   }
-
-  .ranking__note {
-    margin-top: 4px;
-    font-size: 10.5px;
-    line-height: 1.4;
-    color: var(--muted);
-  }
-
-  .ranking__empty {
-    font-size: 11.5px;
-    line-height: 1.5;
-    color: var(--muted);
-  }
-
-  /* ---------- Every month ---------- */
-  /* Full width rather than the title column: this band never changes, so it gets the least height. */
-  .standing {
-    flex: 1;
-    display: block;
-    background: var(--stone);
-    padding-top: 12px;
-    padding-bottom: 8px;
-  }
-  .standing h2 {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--navy);
-  }
-  .standing .areas { margin-top: 8px; }
 
   .areas {
     display: grid;
@@ -440,6 +389,7 @@
   /* ---------- Sign-off ---------- */
   .signoff {
     flex: none;
+    margin-top: auto;
     background: var(--stone);
     padding: 0 var(--gutter) 16px;
   }
@@ -460,6 +410,237 @@
   .signoff__by img { height: 17px; width: auto; display: block; }
   .signoff__url { padding-left: 12px; border-left: 1px solid #D6D1C8; }
   .signoff__next strong { color: var(--navy); font-weight: 600; }
+
+  /* ---------- Shared small parts ---------- */
+  figcaption,
+  .detail__block h3,
+  .dtable caption {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--navy);
+    text-align: left;
+    margin-bottom: 4px;
+  }
+  .chart { display: block; overflow: visible; }
+
+  /* ---------- Page 1: needs your attention ---------- */
+  .attention {
+    flex: none;
+    margin: 0 var(--gutter) 14px;
+    padding: 12px 16px 12px;
+    background: var(--stone);
+    border-left: 2px solid var(--copper);
+  }
+  .attention h2 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--navy);
+  }
+  .attention ul { list-style: none; margin-top: 4px; }
+  .attention li {
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+  .attention li + li { margin-top: 3px; }
+  .attention strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- Page 2: header band ---------- */
+  .band {
+    flex: none;
+    height: 64px;
+    padding: 0 var(--gutter);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--navy);
+    border-bottom: 2px solid var(--copper-light);
+    color: #fff;
+  }
+  .band__logo { height: 34px; width: auto; display: block; }
+  .band__title { text-align: right; font-size: 11.5px; line-height: 1.45; }
+  .band__title strong {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--copper-light);
+  }
+  .band__title span { color: #E4E9ED; }
+
+  /* ---------- Page 2: detail sections ---------- */
+  .detail { padding-top: 16px; padding-bottom: 10px; }
+  .detail + .detail::before {
+    content: "";
+    grid-column: 1 / -1;
+    height: 1px;
+    margin-bottom: 12px;
+    background: var(--hairline);
+  }
+  .detail__body { min-width: 0; }
+
+  .facts { margin-top: 10px; }
+  .facts div {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 3px 0;
+    border-top: 1px solid var(--hairline);
+    font-size: 11px;
+  }
+  .facts div:last-child { border-bottom: 1px solid var(--hairline); }
+  .facts dt { color: var(--muted); }
+  .facts dd { font-weight: 600; color: var(--navy); }
+  .detail__key {
+    margin-top: 8px;
+    font-size: 10.5px !important;
+    line-height: 1.45;
+    color: var(--muted);
+  }
+
+  .detail__charts,
+  .detail__tables,
+  .detail__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 32px;
+  }
+  .detail__tables { margin-top: 10px; }
+  .detail__grid { row-gap: 12px; }
+  .detail__note--wide { grid-column: 1 / -1; }
+  .detail__note {
+    margin-top: 6px;
+    font-size: 10.5px;
+    color: var(--muted);
+  }
+
+  .dtable {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+  .dtable th {
+    padding: 0 0 3px;
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--muted);
+    text-align: right;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .dtable th:first-child { text-align: left; }
+  .dtable th:nth-child(n + 2) { width: 38px; }
+  .dtable th:last-child { width: 48px; }
+  .dtable td {
+    padding: 0;
+    line-height: 1.5;
+    text-align: right;
+    color: var(--ink);
+  }
+  .dtable td:nth-child(3) { font-weight: 600; color: var(--navy); }
+  .dtable__name {
+    text-align: left !important;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    padding-right: 8px !important;
+  }
+
+  .barlist { list-style: none; }
+  .barlist__row {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    align-items: center;
+    column-gap: 8px;
+    font-size: 11px;
+    line-height: 1.6;
+  }
+  .barlist__label {
+    color: var(--ink);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .barlist__track { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  /* Rounded data end, square base, no background track. */
+  .barlist__bar {
+    height: 8px;
+    min-width: 2px;
+    max-width: calc(100% - 40px);
+    background: #B07A55;
+    border-radius: 0 2px 2px 0;
+  }
+  .barlist__value { flex: none; font-weight: 600; color: var(--navy); }
+
+  /* ---------- Page 2: site health ---------- */
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    column-gap: 20px;
+    row-gap: 12px;
+    list-style: none;
+  }
+  .tile {
+    display: flex;
+    flex-direction: column;
+    padding-top: 6px;
+    border-top: 1.5px solid var(--navy);
+  }
+  .tile--flag { border-top: 2px solid var(--copper); }
+  .tile__label { font-size: 10.5px; color: var(--muted); }
+  .tile__value { margin-top: 1px; font-size: 15px; line-height: 1.25; font-weight: 600; color: var(--navy); }
+  .tile__note { margin-top: 2px; font-size: 10.5px; line-height: 1.35; color: var(--muted); }
+
+  /* ---------- Page 2: plans and standing care ---------- */
+  .plans {
+    flex: 1;
+    background: var(--stone);
+    padding: 13px var(--gutter) 0;
+  }
+  .plans__next {
+    display: grid;
+    grid-template-columns: var(--rail) 1fr;
+    column-gap: var(--rail-gap);
+    padding-bottom: 9px;
+  }
+  .plans__next h2 { font-size: 14px; font-weight: 600; color: var(--navy); }
+  .plans__next ul {
+    list-style: none;
+    display: grid;
+    row-gap: 1px;
+  }
+  .plans__next li {
+    position: relative;
+    padding-left: 12px;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--ink);
+  }
+  .plans__next li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.62em;
+    width: 5px;
+    height: 1.5px;
+    background: var(--copper);
+  }
+  .plans .areas-wrap { padding-top: 8px; border-top: 1px solid #D6D1C8; }
+  .plans .areas-wrap h2 { font-size: 13px; font-weight: 600; color: var(--navy); }
+  /* One line per area: this list never changes, so it gets the least height. */
+  .plans .areas {
+    margin-top: 6px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 32px;
+    row-gap: 2px;
+  }
+  .plans .area { padding-top: 0; border-top: 0; font-size: 11px; line-height: 1.45; }
+  .plans .area h3,
+  .plans .area p { display: inline; margin: 0; font-size: 11px; }
+  .plans .area h3 { margin-right: 4px; }
+
+  .signoff__page { margin-left: 12px; padding-left: 12px; border-left: 1px solid #D6D1C8; }
 </style>
 </head>
 <body>
@@ -508,15 +689,66 @@
       </div>
 
       <div class="search__body">
-{{searchBody}}
+{{glance}}
       </div>
     </section>
 
-    <section class="section standing" aria-labelledby="standing-title">
-      <h2 id="standing-title">Checked every month</h2>
-      <ul class="areas">
-{{careAreas}}
+{{attention}}
+
+    <footer class="signoff signoff--plain">
+      <div class="signoff__inner">
+        <div class="signoff__by">
+          <img src="{{agencyWordmark}}" alt="{{agencyName}}">
+          <span>{{serviceName}}</span>
+          <span class="signoff__url">{{agencyDomain}}</span>
+        </div>
+        <div class="signoff__next">Page 1 of 2</div>
+      </div>
+    </footer>
+
+  </main>
+
+  <main class="page page--detail">
+
+    <header class="band">
+      <img class="band__logo" src="{{clientLogo}}" alt="{{clientName}}">
+      <p class="band__title">
+        <strong>The detail</strong>
+        <span>Website care report, {{periodLabel}}</span>
+      </p>
+    </header>
+
+    <section class="section detail" aria-labelledby="search-detail-title">
+{{searchDetail}}
+    </section>
+
+    <section class="section detail" aria-labelledby="visitor-detail-title">
+{{visitorDetail}}
+    </section>
+
+    <section class="section detail" aria-labelledby="health-title">
+      <div class="section__title">
+        <h2 id="health-title">Site health</h2>
+        <p>{{healthChecked}}</p>
+      </div>
+      <ul class="tiles">
+{{healthTiles}}
       </ul>
+    </section>
+
+    <section class="plans" aria-label="Plans and standing care">
+      <div class="plans__next">
+        <h2>Coming in {{nextMonthName}}</h2>
+        <ul>
+{{nextMonth}}
+        </ul>
+      </div>
+      <div class="areas-wrap">
+        <h2 id="standing-title">Checked every month</h2>
+        <ul class="areas">
+{{careAreas}}
+        </ul>
+      </div>
     </section>
 
     <footer class="signoff">
@@ -526,7 +758,7 @@
           <span>{{serviceName}}</span>
           <span class="signoff__url">{{agencyDomain}}</span>
         </div>
-        <div class="signoff__next">Next report <strong>{{nextReportDate}}</strong></div>
+        <div class="signoff__next">Next report <strong>{{nextReportDate}}</strong><span class="signoff__page">Page 2 of 2</span></div>
       </div>
     </footer>
 

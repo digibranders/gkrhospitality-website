@@ -28,6 +28,11 @@ export function previousPeriod(period: string): string {
   return month === 1 ? `${year - 1}-12` : `${year}-${pad(month - 1)}`;
 }
 
+export function nextPeriod(period: string): string {
+  const { year, month } = periodParts(period);
+  return month === 12 ? `${year + 1}-01` : `${year}-${pad(month + 1)}`;
+}
+
 /**
  * True once every day of the month has final data. Google's reporting lags
  * the live day: about three days for Search Console, two for GA4.

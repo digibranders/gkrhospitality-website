@@ -11,7 +11,8 @@
     "test": "vitest",
     "report": "node reports/care-report/build.ts",
     "report:search": "node reports/care-report/fetch-search.ts",
-    "report:analytics": "node reports/care-report/fetch-analytics.ts"
+    "report:analytics": "node reports/care-report/fetch-analytics.ts",
+    "report:health": "node reports/care-report/fetch-health.ts"
   },
   "dependencies": {
     "@getbrevo/brevo": "^3.0.4",

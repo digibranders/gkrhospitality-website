@@ -14,17 +14,36 @@ export class SearchConsoleError extends Error {
 export interface Totals {
   clicks: number;
   impressions: number;
+  /** Average position in Google results, 1 being the top. One decimal. */
+  position: number;
 }
 
-export interface PageClicks {
+export interface PageStats {
   /** Path only, like "/services". Host and query string are dropped so www and non-www merge. */
   path: string;
   clicks: number;
+  impressions: number;
+  position: number;
 }
 
-export interface QueryClicks {
+export interface QueryStats {
   query: string;
   clicks: number;
+  impressions: number;
+  position: number;
+}
+
+export interface DayStats {
+  /** YYYY-MM-DD */
+  date: string;
+  clicks: number;
+  impressions: number;
+}
+
+export interface DeviceStats {
+  device: string;
+  clicks: number;
+  impressions: number;
 }
 
 /** Search Console data is final roughly two to three days after the day it describes. */
@@ -42,6 +61,7 @@ interface Row {
   keys: string[];
   clicks: number;
   impressions: number;
+  position: number;
 }
 
 function readRows(input: unknown): Row[] {
@@ -54,27 +74,36 @@ function readRows(input: unknown): Row[] {
   return rows.map((raw, i) => {
     const row = raw as Record<string, unknown>;
     const keys = row.keys ?? [];
+    const numberOrZero = (value: unknown): number | undefined =>
+      value === undefined ? 0 : typeof value === "number" && Number.isFinite(value) ? value : undefined;
+    const impressions = numberOrZero(row.impressions);
+    const position = numberOrZero(row.position);
     if (
       !Array.isArray(keys) ||
       !keys.every((k) => typeof k === "string") ||
       typeof row.clicks !== "number" ||
-      (row.impressions !== undefined && typeof row.impressions !== "number")
+      impressions === undefined ||
+      position === undefined
     ) {
       throw new SearchConsoleError(`Search Console row ${i} is not in the expected format: ${JSON.stringify(raw)}`);
     }
-    return { keys: keys as string[], clicks: row.clicks, impressions: (row.impressions as number | undefined) ?? 0 };
+    return { keys: keys as string[], clicks: row.clicks, impressions, position };
   });
 }
+
+const oneDecimal = (value: number): number => Math.round(value * 10) / 10;
 
 /** Totals from a query with no dimensions. Null when Search Console has no data for the range. */
 export function totalsFromResponse(response: unknown): Totals | null {
   const rows = readRows(response);
   if (rows.length === 0) return null;
-  return { clicks: rows[0].clicks, impressions: rows[0].impressions };
+  const [row] = rows;
+  return { clicks: row.clicks, impressions: row.impressions, position: oneDecimal(row.position) };
 }
 
-const byClicksThenName = <T extends { clicks: number }>(name: (item: T) => string) =>
-  (a: T, b: T): number => b.clicks - a.clicks || name(a).localeCompare(name(b));
+/** Most clicks first, then most impressions, then alphabetical so ties are stable. */
+const byClicksThenImpressions = <T extends { clicks: number; impressions: number }>(name: (item: T) => string) =>
+  (a: T, b: T): number => b.clicks - a.clicks || b.impressions - a.impressions || name(a).localeCompare(name(b));
 
 function normalizePath(url: string): string {
   let path: string;
@@ -86,27 +115,59 @@ function normalizePath(url: string): string {
   return path.length > 1 ? path.replace(/\/+$/, "") : "/";
 }
 
-/** Pages ranked by clicks. URLs for the same path (www and non-www, with or without a trailing slash) are merged. */
-export function topPagesFromRows(response: unknown, limit: number): PageClicks[] {
-  const totals: Record<string, number> = {};
+/**
+ * Pages with their clicks, impressions and average position. URLs for the same
+ * path (www and non-www, trailing slash or not) are merged, with the position
+ * weighted by impressions as Search Console does.
+ */
+export function pageStatsFromRows(response: unknown, limit: number): PageStats[] {
+  const merged: Record<string, { clicks: number; impressions: number; weighted: number }> = {};
   for (const row of readRows(response)) {
     const path = normalizePath(row.keys[0] ?? "");
-    totals[path] = (totals[path] ?? 0) + row.clicks;
+    const entry = (merged[path] ??= { clicks: 0, impressions: 0, weighted: 0 });
+    entry.clicks += row.clicks;
+    entry.impressions += row.impressions;
+    entry.weighted += row.position * row.impressions;
   }
-  return Object.keys(totals)
-    .map((path) => ({ path, clicks: totals[path] }))
-    .filter((page) => page.clicks > 0)
-    .sort(byClicksThenName<PageClicks>((page) => page.path))
+  return Object.keys(merged)
+    .map((path) => {
+      const { clicks, impressions, weighted } = merged[path];
+      return { path, clicks, impressions, position: impressions > 0 ? oneDecimal(weighted / impressions) : 0 };
+    })
+    .filter((page) => page.impressions > 0)
+    .sort(byClicksThenImpressions<PageStats>((page) => page.path))
     .slice(0, limit);
 }
 
-/** Queries ranked by clicks. Search Console leaves out rare queries for privacy, so this list can be short. */
-export function topQueriesFromRows(response: unknown, limit: number): QueryClicks[] {
+/**
+ * Queries with their clicks, impressions and average position, including
+ * those that were seen but not clicked. Search Console leaves out rare queries
+ * for privacy, so this list can be short.
+ */
+export function queryStatsFromRows(response: unknown, limit: number): QueryStats[] {
   return readRows(response)
-    .map((row) => ({ query: row.keys[0] ?? "", clicks: row.clicks }))
-    .filter((item) => item.clicks > 0 && item.query !== "")
-    .sort(byClicksThenName<QueryClicks>((item) => item.query))
+    .map((row) => ({ query: row.keys[0] ?? "", clicks: row.clicks, impressions: row.impressions, position: oneDecimal(row.position) }))
+    .filter((item) => item.query !== "" && item.impressions > 0)
+    .sort(byClicksThenImpressions<QueryStats>((item) => item.query))
     .slice(0, limit);
+}
+
+/** Clicks and impressions per day, in date order. Days Search Console omits are absent, not zero. */
+export function dailyStatsFromRows(response: unknown): DayStats[] {
+  return readRows(response)
+    .filter((row) => /^\d{4}-\d{2}-\d{2}$/.test(row.keys[0] ?? ""))
+    .map((row) => ({ date: row.keys[0], clicks: row.clicks, impressions: row.impressions }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+const DEVICE_NAMES: Record<string, string> = { DESKTOP: "Desktop", MOBILE: "Mobile", TABLET: "Tablet" };
+
+/** Clicks and impressions by device, most impressions first. */
+export function deviceStatsFromRows(response: unknown): DeviceStats[] {
+  return readRows(response)
+    .map((row) => ({ device: DEVICE_NAMES[row.keys[0] ?? ""] ?? row.keys[0] ?? "Other", clicks: row.clicks, impressions: row.impressions }))
+    .filter((item) => item.impressions > 0)
+    .sort((a, b) => b.impressions - a.impressions || a.device.localeCompare(b.device));
 }
 
 /* ------------------------------------------------------------------ */
