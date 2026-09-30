@@ -995,8 +995,6 @@ function renderSearchDetail(search: SearchReport, config: ReportConfig, period: 
     ...perf.devices.slice(0, 2).map((d): [string, string] => [`Shown on ${d.device.toLowerCase()}`, numberFormat.format(d.impressions)]),
   ]);
   const key = '        <p class="detail__key">Shown: impressions, the times the site appeared in Google results. Position: its average place in them, 1 being the top.</p>';
-  const days = (value: (d: DayStats) => number) =>
-    fillDays(perf.daily.map((d) => ({ date: d.date, value: value(d) })), range.startDate, perf.throughDate);
   const listedClicks = perf.queries.reduce((sum, q) => sum + q.clicks, 0);
   const coverage =
     perf.queries.length > 0 && listedClicks < perf.totals.clicks
@@ -1005,14 +1003,6 @@ function renderSearchDetail(search: SearchReport, config: ReportConfig, period: 
   return [
     rail(`Google Search, ${describeRange(range.startDate, perf.throughDate)}.`, `${railFacts}\n${key}`),
     '      <div class="detail__body">',
-    '        <div class="detail__charts">',
-    "          <figure><figcaption>Times shown per day</figcaption>",
-    `            ${dailyColumns(days((d) => d.impressions), { width: 238, height: 56, title: "Times shown in Google per day" })}`,
-    "          </figure>",
-    "          <figure><figcaption>Clicks per day</figcaption>",
-    `            ${dailyColumns(days((d) => d.clicks), { width: 238, height: 56, title: "Clicks from Google per day" })}`,
-    "          </figure>",
-    "        </div>",
     '        <div class="detail__tables">',
     detailTable("What people searched", "Search", perf.queries.map((q) => ({ name: q.query, ...q }))),
     detailTable(

@@ -384,10 +384,10 @@ describe("renderReport: page 1", () => {
 });
 
 describe("renderReport: page 2", () => {
-  it("shows search detail: daily charts, both tables, the key and the privacy note", () => {
+  it("shows search detail: both tables, the key and the privacy note, without daily charts", () => {
     const html = render();
     expect(html).toContain("Search in detail");
-    expect(html).toContain("Times shown per day");
+    expect(html).not.toContain("Times shown per day");
     expect(html).toContain('<td class="dtable__name">hospitalit…g firm ny</td>');
     expect(html).toContain('<td class="dtable__name">hospitalit…new york</td>');
     expect(html).toContain("&lt;b&gt;gkr&lt;/b&gt; hotels");
