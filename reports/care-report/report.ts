@@ -161,7 +161,7 @@ const LIMITS = {
   improvementsNote: 110,
   improvementArea: 24,
   improvementTitle: 36, // one line
-  improvementBody: 84, // two lines
+  improvementBody: 80, // two lines at 12px
   careCheck: 28,
   attentionTitle: 60,
   attentionDetail: 140,

@@ -77,7 +77,7 @@ export function dailyColumns(
     .join("");
 
   const text = (x: number, y: number, anchor: string, content: string, weight = 400): string =>
-    `<text x="${round1(x)}" y="${round1(y)}" text-anchor="${anchor}" font-size="10.5" font-weight="${weight}" fill="${LABEL}">${escapeXml(content)}</text>`;
+    `<text x="${round1(x)}" y="${round1(y)}" text-anchor="${anchor}" font-size="11" font-weight="${weight}" fill="${LABEL}">${escapeXml(content)}</text>`;
 
   let peak = "";
   if (peakIndex >= 0) {
