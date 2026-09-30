@@ -994,14 +994,15 @@ function renderSearchDetail(search: SearchReport, config: ReportConfig, period: 
     ["Average position", perf.totals.position.toFixed(1)],
     ...perf.devices.slice(0, 2).map((d): [string, string] => [`Shown on ${d.device.toLowerCase()}`, numberFormat.format(d.impressions)]),
   ]);
-  const key = '        <p class="detail__key">Shown: impressions, the times the site appeared in Google results. Position: its average place in them, 1 being the top.</p>';
+  // The key sits under the tables, not in the rail, so the rail stays as short as the tables beside it.
+  const key = "Shown: impressions, the times the site appeared in Google. Position: its average place, 1 being the top.";
   const listedClicks = perf.queries.reduce((sum, q) => sum + q.clicks, 0);
   const coverage =
     perf.queries.length > 0 && listedClicks < perf.totals.clicks
       ? `        <p class="detail__note">${escapeHtml(`Google keeps rare searches private, so the searches listed cover ${numberFormat.format(listedClicks)} of ${numberFormat.format(perf.totals.clicks)} clicks.`)}</p>`
       : "";
   return [
-    rail(`Google Search, ${describeRange(range.startDate, perf.throughDate)}.`, `${railFacts}\n${key}`),
+    rail(`Google Search, ${describeRange(range.startDate, perf.throughDate)}.`, railFacts),
     '      <div class="detail__body">',
     '        <div class="detail__tables">',
     detailTable("What people searched", "Search", perf.queries.map((q) => ({ name: q.query, ...q }))),
@@ -1011,6 +1012,7 @@ function renderSearchDetail(search: SearchReport, config: ReportConfig, period: 
       perf.pages.map((p) => ({ name: pageName(p.path, config.searchConsole.pageNames), ...p })),
     ),
     "        </div>",
+    `        <p class="detail__note">${escapeHtml(key)}</p>`,
     coverage,
     "      </div>",
   ].join("\n");

@@ -455,6 +455,12 @@
 
   /* ---------- Page 2: detail sections ---------- */
   .detail { padding-top: 16px; padding-bottom: 10px; }
+  /*
+   * Page 2's content height changes month to month, so the spare height is
+   * shared equally between the three sections and the plans band instead of
+   * pooling at the bottom of the band. Rows stay at the top of each section.
+   */
+  .page--detail > .detail { flex: 1 0 auto; align-content: start; }
   .detail + .detail::before {
     content: "";
     grid-column: 1 / -1;
@@ -476,13 +482,6 @@
   .facts div:last-child { border-bottom: 1px solid var(--hairline); }
   .facts dt { color: var(--muted); }
   .facts dd { font-weight: 600; color: var(--navy); }
-  .detail__key {
-    margin-top: 8px;
-    font-size: 10.5px !important;
-    line-height: 1.45;
-    color: var(--muted);
-  }
-
   .detail__tables,
   .detail__grid {
     display: grid;
@@ -576,7 +575,7 @@
 
   /* ---------- Page 2: plans and standing care ---------- */
   .plans {
-    flex: 1;
+    flex: 1 0 auto;
     background: var(--stone);
     padding: 13px var(--gutter) 0;
   }
