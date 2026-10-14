@@ -1206,8 +1206,6 @@ export function renderReport(
     clientLogo: escapeHtml(config.client.logo),
     clientName: escapeHtml(config.client.name),
     clientDomain: escapeHtml(config.client.domain),
-    // Month and year only ("July 2026"); the day adds nothing for the client.
-    issuedMonth: escapeHtml(formatPeriod(month.issued.slice(0, 7)).label),
     periodLabel: escapeHtml(period.label),
     monthName: escapeHtml(period.monthName),
     nextMonthName: escapeHtml(nextMonthName),
