@@ -1,0 +1,79 @@
+{
+  "period": "2026-04",
+  "sample": true,
+  "issued": "2026-05-05",
+  "nextReport": "2026-06-04",
+  "headline": "Your website is stable and fully monitored.",
+  "headlineEmphasis": "stable",
+  "summary": "In April we set up round the clock uptime checks, blocked 14 spam enquiries, refreshed the sitemap and tested a full restore.",
+  "figures": [
+    {
+      "value": "99.9",
+      "unit": "%",
+      "label": [
+        "Uptime",
+        "this month"
+      ]
+    },
+    {
+      "value": "14",
+      "label": [
+        "Spam enquiries",
+        "blocked"
+      ]
+    },
+    {
+      "value": "10",
+      "label": [
+        "Pages checked",
+        "every week"
+      ]
+    },
+    {
+      "value": "2",
+      "label": [
+        "Deployments",
+        "shipped"
+      ]
+    }
+  ],
+  "improvementsNote": "The main changes this month, each tied to an area of ongoing care.",
+  "improvements": [
+    {
+      "area": "Monitoring",
+      "title": "Uptime checked every five minutes",
+      "body": "The site is now checked around the clock, with an alert if it ever goes down."
+    },
+    {
+      "area": "Security",
+      "title": "Spam filter tightened on the form",
+      "body": "Automated spam no longer reaches your inbox. 14 junk enquiries were stopped."
+    },
+    {
+      "area": "Website health",
+      "title": "Sitemap refreshed for Google",
+      "body": "Google now has an up to date list of every page on the site."
+    },
+    {
+      "area": "Backups & history",
+      "title": "Full restore tested",
+      "body": "We restored a complete copy of the site to confirm the backups work."
+    }
+  ],
+  "nextMonth": [
+    "Update Next.js and React to their latest stable releases",
+    "Fix the broken project links on the Work page",
+    "Compress the largest gallery images"
+  ],
+  "operations": {
+    "deployments": {
+      "succeeded": 2,
+      "total": 2
+    },
+    "runtimeErrors": {
+      "count": 0,
+      "days": 7
+    }
+  },
+  "attention": []
+}

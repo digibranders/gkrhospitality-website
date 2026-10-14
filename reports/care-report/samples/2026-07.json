@@ -1,0 +1,79 @@
+{
+  "period": "2026-07",
+  "sample": true,
+  "issued": "2026-08-04",
+  "nextReport": "2026-08-28",
+  "headline": "Your website is secure and running smoothly.",
+  "headlineEmphasis": "secure",
+  "summary": "In July we applied six security patches, made sure every enquiry reaches both inboxes and published a new project page.",
+  "figures": [
+    {
+      "value": "6",
+      "label": [
+        "Security patches",
+        "applied"
+      ]
+    },
+    {
+      "value": "100",
+      "unit": "%",
+      "label": [
+        "Enquiries",
+        "delivered"
+      ]
+    },
+    {
+      "value": "1",
+      "label": [
+        "Project",
+        "published"
+      ]
+    },
+    {
+      "value": "3",
+      "label": [
+        "Deployments",
+        "shipped"
+      ]
+    }
+  ],
+  "improvementsNote": "The main changes this month, each tied to an area of ongoing care.",
+  "improvements": [
+    {
+      "area": "Security",
+      "title": "Security patches applied",
+      "body": "Six patches were applied the week they were released, with no downtime."
+    },
+    {
+      "area": "Website health",
+      "title": "Every enquiry reaches both inboxes",
+      "body": "Some enquiries only reached one inbox. Every form now reaches both."
+    },
+    {
+      "area": "Code quality",
+      "title": "New project added to Work page",
+      "body": "The latest project now has its own page with photos and a summary."
+    },
+    {
+      "area": "Monitoring",
+      "title": "Uptime held at 100%",
+      "body": "The site stayed online all month, confirmed by checks every five minutes."
+    }
+  ],
+  "nextMonth": [
+    "Switch on live error monitoring",
+    "Fix the footer contact button",
+    "Clean up unused code and old branches"
+  ],
+  "operations": {
+    "deployments": {
+      "succeeded": 3,
+      "total": 3
+    },
+    "runtimeErrors": {
+      "count": 1,
+      "days": 7
+    }
+  },
+  "attention": []
+}

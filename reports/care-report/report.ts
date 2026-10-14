@@ -128,6 +128,12 @@ export interface MonthlyReport {
   nextMonth: string[];
   /** Optional per-month masthead photo; falls back to config.client.heroImage. */
   heroImage?: string;
+  /**
+   * True for an illustrative report built from samples/ with synthetic figures.
+   * The report then names no data source and carries a visible label, so the
+   * figures cannot be mistaken for measured ones.
+   */
+  sample: boolean;
 }
 
 export class ReportValidationError extends Error {
@@ -438,6 +444,7 @@ export function parseMonth(input: unknown, config: ReportConfig, source = "month
     nextMonth: (c.array(root.nextMonth, "nextMonth") ?? []).map((line, i) =>
       c.text(line, `nextMonth[${i}]`, LIMITS.nextMonthItem),
     ),
+    sample: root.sample === true,
   };
   if (month.attention.length > MAX_ATTENTION) {
     c.fail("attention", `must have at most ${MAX_ATTENTION} items to fit the box (found ${month.attention.length})`);
@@ -446,6 +453,7 @@ export function parseMonth(input: unknown, config: ReportConfig, source = "month
     c.fail("nextMonth", `must have 1 to ${MAX_NEXT_MONTH} items (found ${month.nextMonth.length})`);
   }
   if (root.heroImage !== undefined) month.heroImage = c.asset(root.heroImage, "heroImage");
+  if (root.sample !== undefined && typeof root.sample !== "boolean") c.fail("sample", "must be true or false");
 
   c.throwIfAny(source);
   return month;
@@ -695,7 +703,8 @@ export function formatPeriod(period: string): { label: string; monthName: string
 export function reportFileStem(config: ReportConfig, month: MonthlyReport): string {
   const slug = (text: string): string =>
     text.replace(/&/g, "and").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-  return `${slug(config.client.name)}-Website-Care-Report-${slug(formatPeriod(month.period).label)}`;
+  const stem = `${slug(config.client.name)}-Website-Care-Report-${slug(formatPeriod(month.period).label)}`;
+  return month.sample ? `${stem}-Sample` : stem;
 }
 
 /* ------------------------------------------------------------------ */
@@ -817,10 +826,13 @@ function describeRange(startDate: string, endDate: string): string {
   return `${start[0]} to ${end[0]} ${end[1]}`;
 }
 
+const SAMPLE_SOURCE = "Illustrative figures";
+
 /** Where the page 1 numbers come from, and the days they cover. */
-function describeSources(analytics: AnalyticsReport, search: SearchReport, period: string): string {
+function describeSources(analytics: AnalyticsReport, search: SearchReport, period: string, sample: boolean): string {
   const month = monthRange(period);
   const analyticsRange = describeRange(analytics.startDate, analytics.throughDate);
+  if (sample) return `${SAMPLE_SOURCE}, ${analyticsRange}.`;
   if (!search.performance) return `Google Analytics, ${analyticsRange}.`;
   const searchRange = describeRange(month.startDate, search.performance.throughDate);
   return analyticsRange === searchRange
@@ -969,7 +981,7 @@ function detailTable(
   ].join("\n");
 }
 
-function renderSearchDetail(search: SearchReport, config: ReportConfig, period: string, monthName: string): string {
+function renderSearchDetail(search: SearchReport, config: ReportConfig, period: string, monthName: string, sample: boolean): string {
   const perf = search.performance;
   const rail = (sourceLine: string, extra: string): string =>
     [
@@ -1002,7 +1014,7 @@ function renderSearchDetail(search: SearchReport, config: ReportConfig, period: 
       ? `        <p class="detail__note">${escapeHtml(`Google keeps rare searches private, so the searches listed cover ${numberFormat.format(listedClicks)} of ${numberFormat.format(perf.totals.clicks)} clicks.`)}</p>`
       : "";
   return [
-    rail(`Google Search, ${describeRange(range.startDate, perf.throughDate)}.`, railFacts),
+    rail(`${sample ? SAMPLE_SOURCE : "Google Search"}, ${describeRange(range.startDate, perf.throughDate)}.`, railFacts),
     '      <div class="detail__body">',
     '        <div class="detail__tables">',
     detailTable("What people searched", "Search", perf.queries.map((q) => ({ name: q.query, ...q }))),
@@ -1043,7 +1055,7 @@ function audienceNote(d: VisitorDetail, totalVisits: number): string {
   return parts.length ? `        <p class="detail__note detail__note--wide">${escapeHtml(`${parts.join(", and ")}.`)}</p>` : "";
 }
 
-function renderVisitorDetail(analytics: AnalyticsReport, config: ReportConfig): string {
+function renderVisitorDetail(analytics: AnalyticsReport, config: ReportConfig, sample: boolean): string {
   const d = analytics.detail;
   // Shares are of all visits. The country list holds only the top few, so summing it would overstate the leader.
   const totalVisits = analytics.current.visits;
@@ -1053,7 +1065,7 @@ function renderVisitorDetail(analytics: AnalyticsReport, config: ReportConfig): 
   return [
     '      <div class="section__title">',
     '        <h2 id="visitor-detail-title">Visitors in detail</h2>',
-    `        <p>${escapeHtml(`Google Analytics, ${describeRange(analytics.startDate, analytics.throughDate)}.`)}</p>`,
+    `        <p>${escapeHtml(`${sample ? SAMPLE_SOURCE : "Google Analytics"}, ${describeRange(analytics.startDate, analytics.throughDate)}.`)}</p>`,
     facts([
       ["Page views", count(d.pageViews)],
       ["Engaged visits", percentFormat.format(d.engagementRate)],
@@ -1088,8 +1100,9 @@ function healthTiles(health: HealthReport, month: MonthlyReport, indexing: Index
   };
   const { deployments, runtimeErrors } = month.operations;
   const alerts = health.audit;
-  const alertCount = alerts.critical + alerts.high + alerts.moderate + alerts.low;
-  const worst = alerts.critical ? "critical" : alerts.high ? "high" : alerts.moderate ? "moderate" : alerts.low ? "low" : "";
+  // Serious (critical and high) alerts are counted on their own, so a total never borrows the worst severity's name.
+  const serious = alerts.critical + alerts.high;
+  const minor = alerts.moderate + alerts.low;
   return [
     {
       label: "Security certificate",
@@ -1112,7 +1125,11 @@ function healthTiles(health: HealthReport, month: MonthlyReport, indexing: Index
     {
       label: "Indexed by Google",
       value: `${indexing.pagesIndexed} of ${indexing.pagesChecked}`,
-      note: indexing.notIndexed.length ? `Missing: ${indexing.notIndexed.join(", ")}` : "Every page checked",
+      note: !indexing.notIndexed.length
+        ? "Every page checked"
+        : indexing.notIndexed.length > 2
+          ? `${indexing.notIndexed.length} pages not indexed`
+          : `Missing: ${indexing.notIndexed.join(", ")}`,
       flag: indexing.notIndexed.length > 0,
     },
     {
@@ -1130,14 +1147,18 @@ function healthTiles(health: HealthReport, month: MonthlyReport, indexing: Index
     {
       label: "Security headers",
       value: `${health.headers.present.length} of ${health.headers.present.length + health.headers.missing.length}`,
-      note: health.headers.missing.length ? `To add: ${lowerFirstWord(health.headers.missing.join(", "))}` : "All in place",
+      note: !health.headers.missing.length
+        ? "All in place"
+        : health.headers.missing.length > 1
+          ? `${health.headers.missing.length} still to add`
+          : `To add: ${lowerFirstWord(health.headers.missing[0])}`,
       flag: false,
     },
     {
       label: "Security alerts in code",
-      value: alertCount === 0 ? "None" : `${alertCount} ${worst}`,
+      value: serious > 0 ? `${serious} serious` : minor > 0 ? `${minor} minor` : "None",
       note: `Next.js ${health.versions.next}, React ${health.versions.react}`,
-      flag: alerts.critical + alerts.high > 0,
+      flag: serious > 0,
     },
   ];
 }
@@ -1194,13 +1215,17 @@ export function renderReport(
     figures: renderFigures(month.figures),
     improvementsNote: escapeHtml(month.improvementsNote),
     improvements: renderImprovements(month.improvements),
-    dataSources: escapeHtml(describeSources(analytics, search, month.period)),
+    dataSources: escapeHtml(describeSources(analytics, search, month.period, month.sample)),
     searchIndexing: escapeHtml(describeIndexing(search.indexing)),
     glance: renderGlance(search, analytics, period.monthName, previousMonth),
     attention: renderAttention(attention),
-    searchDetail: renderSearchDetail(search, config, month.period, period.monthName),
-    visitorDetail: renderVisitorDetail(analytics, config),
-    healthChecked: escapeHtml(`Checked ${formatDate(health.checkedAt.slice(0, 10))}.`),
+    searchDetail: renderSearchDetail(search, config, month.period, period.monthName, month.sample),
+    visitorDetail: renderVisitorDetail(analytics, config, month.sample),
+    healthChecked: escapeHtml(
+      month.sample ? `Illustrative readings, ${formatDate(health.checkedAt.slice(0, 10))}.` : `Checked ${formatDate(health.checkedAt.slice(0, 10))}.`,
+    ),
+    // An illustrative report says so in the masthead and the page 2 band.
+    reportKind: month.sample ? "Sample website care report" : "Website care report",
     healthTiles: renderHealthTiles(healthTiles(health, month, search.indexing, checkedAt)),
     nextMonth: renderNextMonth(month.nextMonth),
     careAreas: renderCareAreas(config.careAreas),

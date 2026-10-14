@@ -1,0 +1,249 @@
+{
+  "source": "Illustrative sample data",
+  "property": "https://www.gkrhospitality.com/",
+  "period": "2026-08",
+  "fetchedAt": "2026-08-28T09:00:00.000Z",
+  "performance": {
+    "throughDate": "2026-08-31",
+    "totals": {
+      "clicks": 16,
+      "impressions": 97,
+      "position": 15.1
+    },
+    "previousTotals": {
+      "clicks": 13,
+      "impressions": 84,
+      "position": 15.6
+    },
+    "daily": [
+      {
+        "date": "2026-08-01",
+        "clicks": 0,
+        "impressions": 2
+      },
+      {
+        "date": "2026-08-02",
+        "clicks": 1,
+        "impressions": 1
+      },
+      {
+        "date": "2026-08-03",
+        "clicks": 2,
+        "impressions": 3
+      },
+      {
+        "date": "2026-08-04",
+        "clicks": 0,
+        "impressions": 0
+      },
+      {
+        "date": "2026-08-05",
+        "clicks": 0,
+        "impressions": 2
+      },
+      {
+        "date": "2026-08-06",
+        "clicks": 1,
+        "impressions": 4
+      },
+      {
+        "date": "2026-08-07",
+        "clicks": 0,
+        "impressions": 5
+      },
+      {
+        "date": "2026-08-08",
+        "clicks": 1,
+        "impressions": 1
+      },
+      {
+        "date": "2026-08-09",
+        "clicks": 1,
+        "impressions": 3
+      },
+      {
+        "date": "2026-08-10",
+        "clicks": 1,
+        "impressions": 5
+      },
+      {
+        "date": "2026-08-11",
+        "clicks": 1,
+        "impressions": 3
+      },
+      {
+        "date": "2026-08-12",
+        "clicks": 1,
+        "impressions": 3
+      },
+      {
+        "date": "2026-08-13",
+        "clicks": 1,
+        "impressions": 5
+      },
+      {
+        "date": "2026-08-14",
+        "clicks": 0,
+        "impressions": 4
+      },
+      {
+        "date": "2026-08-15",
+        "clicks": 0,
+        "impressions": 3
+      },
+      {
+        "date": "2026-08-16",
+        "clicks": 0,
+        "impressions": 2
+      },
+      {
+        "date": "2026-08-17",
+        "clicks": 0,
+        "impressions": 3
+      },
+      {
+        "date": "2026-08-18",
+        "clicks": 0,
+        "impressions": 4
+      },
+      {
+        "date": "2026-08-19",
+        "clicks": 0,
+        "impressions": 2
+      },
+      {
+        "date": "2026-08-20",
+        "clicks": 0,
+        "impressions": 5
+      },
+      {
+        "date": "2026-08-21",
+        "clicks": 0,
+        "impressions": 4
+      },
+      {
+        "date": "2026-08-22",
+        "clicks": 1,
+        "impressions": 2
+      },
+      {
+        "date": "2026-08-23",
+        "clicks": 0,
+        "impressions": 2
+      },
+      {
+        "date": "2026-08-24",
+        "clicks": 0,
+        "impressions": 4
+      },
+      {
+        "date": "2026-08-25",
+        "clicks": 0,
+        "impressions": 5
+      },
+      {
+        "date": "2026-08-26",
+        "clicks": 0,
+        "impressions": 6
+      },
+      {
+        "date": "2026-08-27",
+        "clicks": 0,
+        "impressions": 0
+      },
+      {
+        "date": "2026-08-28",
+        "clicks": 1,
+        "impressions": 4
+      },
+      {
+        "date": "2026-08-29",
+        "clicks": 2,
+        "impressions": 3
+      },
+      {
+        "date": "2026-08-30",
+        "clicks": 1,
+        "impressions": 2
+      },
+      {
+        "date": "2026-08-31",
+        "clicks": 1,
+        "impressions": 5
+      }
+    ],
+    "queries": [
+      {
+        "query": "garrett ronan",
+        "clicks": 5,
+        "impressions": 10,
+        "position": 1.2
+      },
+      {
+        "query": "gkr hospitality",
+        "clicks": 4,
+        "impressions": 7,
+        "position": 1.5
+      },
+      {
+        "query": "hospitality consultant new york",
+        "clicks": 0,
+        "impressions": 4,
+        "position": 43.5
+      },
+      {
+        "query": "gkr hospitality consulting",
+        "clicks": 2,
+        "impressions": 3,
+        "position": 1.1
+      },
+      {
+        "query": "restaurant consulting nyc",
+        "clicks": 0,
+        "impressions": 2,
+        "position": 56.0
+      }
+    ],
+    "pages": [
+      {
+        "path": "/",
+        "clicks": 13,
+        "impressions": 80,
+        "position": 13.4
+      },
+      {
+        "path": "/about",
+        "clicks": 3,
+        "impressions": 17,
+        "position": 19.0
+      }
+    ],
+    "devices": [
+      {
+        "device": "Desktop",
+        "clicks": 12,
+        "impressions": 69
+      },
+      {
+        "device": "Mobile",
+        "clicks": 4,
+        "impressions": 28
+      }
+    ]
+  },
+  "indexing": {
+    "checkedAt": "2026-08-31T10:00:00.000Z",
+    "pagesChecked": 10,
+    "pagesIndexed": 2,
+    "notIndexed": [
+      "/what-we-do",
+      "/how-we-work",
+      "/work",
+      "/gallery",
+      "/reviews",
+      "/contact",
+      "/accessibility",
+      "/privacy-policy"
+    ]
+  }
+}

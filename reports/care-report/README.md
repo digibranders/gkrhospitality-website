@@ -103,6 +103,18 @@ Set up once on 29 September 2026. Nothing here needs doing again unless the key 
 
 To run the fetch on another computer, copy the key file there privately (never by email or chat), or create a new key: Google Cloud > IAM & Admin > Service Accounts > GKR care report > Keys > Add key > JSON. If a key might have leaked, delete it on that same page; the old file stops working at once.
 
+## Sample reports (April to August 2026)
+
+Search Console and Google Analytics were set up in September 2026, so no measured data exists for earlier months. `samples/` holds illustrative reports for April to August 2026 in the same design, with synthetic figures that trend towards the real September numbers. The August sample keeps the copy of the original August report; its data is synthetic like the rest.
+
+```bash
+npm run report -- 2026-04 --sample
+```
+
+- Every file in `samples/` says `"sample": true`, and `--sample` refuses any month file that does not. A month in `months/` that says `"sample": true` is refused too, so synthetic and measured data cannot mix.
+- A sample report labels itself: the masthead and the page 2 band read "Sample website care report", every source line reads "Illustrative figures" instead of naming Google, and the file name ends in `-Sample`.
+- Output goes to `output/samples/<period>/`.
+
 ## House rules the build enforces
 
 - **No em-dashes or en-dashes** anywhere in the copy. Use a comma, colon or full stop.
@@ -125,6 +137,7 @@ To run the fetch on another computer, copy the key file there privately (never b
 | `months/YYYY-MM.search.json` | The month's search numbers, written by `npm run report:search`. |
 | `months/YYYY-MM.analytics.json` | The month's GA4 numbers, written by `npm run report:analytics`. |
 | `months/YYYY-MM.health.json` | The live site and code readings, written by `npm run report:health`. |
+| `samples/` | Illustrative April to August 2026 reports with synthetic data. See "Sample reports". |
 | `report.ts` | Validation, rendering and layout checks. Pure functions, covered by `report.test.ts`. |
 | `search-console.ts` | Search Console and URL Inspection response handling. Pure, covered by `search-console.test.ts`. |
 | `analytics.ts` | GA4 Data API response handling. Pure, covered by `analytics.test.ts`. |

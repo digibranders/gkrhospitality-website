@@ -427,6 +427,44 @@ describe("renderReport: page 2", () => {
   });
 });
 
+describe("renderReport: sample reports", () => {
+  it("labels an illustrative report and names no data source", () => {
+    const html = render({ monthData: { ...month(), sample: true } });
+    expect(html).toContain('<span class="issue__label">Sample website care report, August 2026</span>');
+    expect(html).toContain("<span>Sample website care report, August 2026</span>");
+    expect(html).toContain("Illustrative figures, 1 to 31 August.");
+    expect(html).toContain("Illustrative readings, 29 September 2026.");
+    expect(html).not.toContain("Google Analytics,");
+    expect(html).not.toContain("Google Search,");
+    expect(reportFileStem(config, parseMonth({ ...month(), sample: true }, config))).toBe(
+      "GKR-Hospitality-Website-Care-Report-August-2026-Sample",
+    );
+  });
+
+  it("reads as a normal report when sample is left out, and rejects a non-boolean", () => {
+    expect(render()).toContain('<span class="issue__label">Website care report, August 2026</span>');
+    expect(problemsOf(() => parseMonth({ ...month(), sample: "yes" }, config)).join("\n")).toMatch(/sample/);
+  });
+});
+
+describe("renderReport: health tiles", () => {
+  it("counts long lists instead of naming every item", () => {
+    const health = { ...testHealth(), headers: { present: ["HTTPS enforced (HSTS)"], missing: ["A", "B", "C", "D", "E"] } };
+    const search = { ...testSearch(), indexing: { ...testSearch().indexing, pagesIndexed: 2, notIndexed: ["/a", "/b", "/c", "/d", "/e", "/f", "/g", "/h"] } };
+    const html = render({ health, search });
+    expect(html).toContain("5 still to add");
+    expect(html).toContain("8 pages not indexed");
+  });
+
+  it("counts serious alerts on their own instead of naming a total after the worst one", () => {
+    const tileValue = (audit: HealthReport["audit"]): string | undefined =>
+      /Security alerts in code<\/span>\s*<span class="tile__value">([^<]+)</.exec(render({ health: { ...testHealth(), audit } }))?.[1];
+    expect(tileValue({ critical: 1, high: 9, moderate: 38, low: 25 })).toBe("10 serious");
+    expect(tileValue({ critical: 0, high: 0, moderate: 12, low: 8 })).toBe("20 minor");
+    expect(tileValue({ critical: 0, high: 0, moderate: 0, low: 0 })).toBe("None");
+  });
+});
+
 describe("renderReport: safety", () => {
   it("escapes HTML in every piece of copy", () => {
     const data = month();

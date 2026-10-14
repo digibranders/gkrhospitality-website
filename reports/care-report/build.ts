@@ -2,6 +2,7 @@
  * Builds one monthly care report: HTML and a two-page PDF.
  *
  *   npm run report -- 2026-08
+ *   npm run report -- 2026-04 --sample
  *
  * Reads config.json, months/<period>.json and the search numbers in
  * months/<period>.search.json (from npm run report:search), renders template.html, inlines
@@ -11,6 +12,10 @@
  *
  * Runs on Node's built-in TypeScript support (Node 23.6+), no extra packages.
  * Set CHROME_PATH to use a specific Chrome or Chromium binary.
+ *
+ * --sample builds an illustrative report from samples/ instead of months/,
+ * into output/samples/. Sample files hold synthetic figures, must say
+ * "sample": true, and the report labels itself as illustrative.
  */
 import { execFileSync } from "node:child_process";
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -33,6 +38,7 @@ import {
 
 const ROOT = fileURLToPath(new URL(".", import.meta.url));
 const MONTHS_DIR = join(ROOT, "months");
+const SAMPLES_DIR = join(ROOT, "samples");
 const OUTPUT_DIR = join(ROOT, "output");
 const PERIOD = /^\d{4}-\d{2}$/;
 const CHROME_TIMEOUT_MS = 60_000;
@@ -63,8 +69,8 @@ function readJson(path: string): unknown {
   }
 }
 
-function availablePeriods(): string[] {
-  return readdirSync(MONTHS_DIR)
+function availablePeriods(dataDir: string): string[] {
+  return readdirSync(dataDir)
     .filter((file) => /^\d{4}-\d{2}\.json$/.test(file))
     .map((file) => file.replace(/\.json$/, ""))
     .sort();
@@ -138,42 +144,52 @@ function checkLayout(chrome: string, html: string, outDir: string): void {
   }
 }
 
-function build(period: string): void {
+function build(period: string, sample: boolean): void {
   if (!PERIOD.test(period)) {
     throw new BuildError(`Pass the month as YYYY-MM, for example: npm run report -- 2026-08 (got "${period}")`);
   }
-  const monthPath = join(MONTHS_DIR, `${period}.json`);
+  const dataDir = sample ? SAMPLES_DIR : MONTHS_DIR;
+  const dirName = sample ? "samples" : "months";
+  const monthPath = join(dataDir, `${period}.json`);
   if (!existsSync(monthPath)) {
-    const known = availablePeriods();
+    const known = existsSync(dataDir) ? availablePeriods(dataDir) : [];
     throw new BuildError(
-      `No data for ${period}. Create reports/care-report/months/${period}.json` +
-        (known.length > 0 ? ` (copy months/${known[known.length - 1]}.json as a starting point).` : "."),
+      `No data for ${period}. Create reports/care-report/${dirName}/${period}.json` +
+        (known.length > 0 ? ` (copy ${dirName}/${known[known.length - 1]}.json as a starting point).` : "."),
     );
   }
 
   const config = parseConfig(readJson(join(ROOT, "config.json")));
-  const month = parseMonth(readJson(monthPath), config, `months/${period}.json`);
+  const month = parseMonth(readJson(monthPath), config, `${dirName}/${period}.json`);
   if (month.period !== period) {
-    throw new BuildError(`months/${period}.json says "period": "${month.period}"; the file name and period must match.`);
+    throw new BuildError(`${dirName}/${period}.json says "period": "${month.period}"; the file name and period must match.`);
+  }
+  // Synthetic figures live only in samples/ and real ones only in months/, so neither can pass for the other.
+  if (month.sample !== sample) {
+    throw new BuildError(
+      sample
+        ? `samples/${period}.json must say "sample": true.`
+        : `months/${period}.json says "sample": true. Illustrative reports belong in samples/ and build with --sample.`,
+    );
   }
 
-  const searchPath = join(MONTHS_DIR, `${period}.search.json`);
+  const searchPath = join(dataDir, `${period}.search.json`);
   if (!existsSync(searchPath)) {
     throw new BuildError(`No search data for ${period}. Run: npm run report:search -- ${period}`);
   }
-  const search = parseSearch(readJson(searchPath), period, `months/${period}.search.json`);
+  const search = parseSearch(readJson(searchPath), period, `${dirName}/${period}.search.json`);
 
-  const analyticsPath = join(MONTHS_DIR, `${period}.analytics.json`);
+  const analyticsPath = join(dataDir, `${period}.analytics.json`);
   if (!existsSync(analyticsPath)) {
     throw new BuildError(`No GA4 data for ${period}. Run: npm run report:analytics -- ${period}`);
   }
-  const analytics = parseAnalytics(readJson(analyticsPath), period, `months/${period}.analytics.json`);
+  const analytics = parseAnalytics(readJson(analyticsPath), period, `${dirName}/${period}.analytics.json`);
 
-  const healthPath = join(MONTHS_DIR, `${period}.health.json`);
+  const healthPath = join(dataDir, `${period}.health.json`);
   if (!existsSync(healthPath)) {
     throw new BuildError(`No site health readings for ${period}. Run: npm run report:health -- ${period}`);
   }
-  const health = parseHealth(readJson(healthPath), `months/${period}.health.json`);
+  const health = parseHealth(readJson(healthPath), `${dirName}/${period}.health.json`);
 
   const template = readFileSync(join(ROOT, "template.html"), "utf8");
   const html = inlineAssets(renderReport(template, config, month, search, analytics, health), (assetPath) => {
@@ -182,7 +198,7 @@ function build(period: string): void {
     return readFileSync(file).toString("base64");
   });
 
-  const outDir = join(OUTPUT_DIR, period);
+  const outDir = sample ? join(OUTPUT_DIR, "samples", period) : join(OUTPUT_DIR, period);
   mkdirSync(outDir, { recursive: true });
   const stem = reportFileStem(config, month);
   const htmlPath = join(outDir, `${stem}.html`);
@@ -209,7 +225,8 @@ function formatRelative(path: string): string {
 }
 
 try {
-  build(process.argv[2] ?? "");
+  const args = process.argv.slice(2);
+  build(args.find((arg) => !arg.startsWith("--")) ?? "", args.includes("--sample"));
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;

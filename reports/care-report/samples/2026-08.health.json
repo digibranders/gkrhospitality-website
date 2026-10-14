@@ -1,0 +1,45 @@
+{
+  "checkedAt": "2026-08-31T10:00:00.000Z",
+  "site": "https://www.gkrhospitality.com",
+  "tls": {
+    "validTo": "2026-10-20",
+    "issuer": "Let's Encrypt"
+  },
+  "domain": {
+    "name": "gkrhospitality.com",
+    "expires": "2026-12-05",
+    "registrar": "GoDaddy.com, LLC"
+  },
+  "pages": {
+    "checked": 10,
+    "ok": 10,
+    "averageMs": 349,
+    "slowest": {
+      "path": "/gallery",
+      "ms": 540
+    },
+    "failing": []
+  },
+  "headers": {
+    "present": [
+      "HTTPS enforced (HSTS)"
+    ],
+    "missing": [
+      "Content security policy",
+      "Frame protection",
+      "File type protection",
+      "Referrer policy",
+      "Permissions policy"
+    ]
+  },
+  "audit": {
+    "critical": 1,
+    "high": 9,
+    "moderate": 38,
+    "low": 25
+  },
+  "versions": {
+    "next": "16.1.4",
+    "react": "19.2.1"
+  }
+}

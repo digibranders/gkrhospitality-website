@@ -1,0 +1,78 @@
+{
+  "period": "2026-06",
+  "sample": true,
+  "issued": "2026-07-06",
+  "nextReport": "2026-08-04",
+  "headline": "Your website is healthy and easier to use.",
+  "headlineEmphasis": "healthy",
+  "summary": "In June we fixed the mobile menu, described every gallery image for screen readers and rewrote nine page titles for search.",
+  "figures": [
+    {
+      "value": "38",
+      "label": [
+        "Images",
+        "described"
+      ]
+    },
+    {
+      "value": "9",
+      "label": [
+        "Page titles",
+        "rewritten"
+      ]
+    },
+    {
+      "value": "1",
+      "label": [
+        "Mobile issue",
+        "fixed"
+      ]
+    },
+    {
+      "value": "2",
+      "label": [
+        "Deployments",
+        "shipped"
+      ]
+    }
+  ],
+  "improvementsNote": "The main changes this month, each tied to an area of ongoing care.",
+  "improvements": [
+    {
+      "area": "Website health",
+      "title": "Mobile menu closes after a tap",
+      "body": "The menu used to stay open after choosing a page. It now closes as expected."
+    },
+    {
+      "area": "Code quality",
+      "title": "Gallery images described",
+      "body": "All 38 gallery images now have text descriptions for screen readers."
+    },
+    {
+      "area": "Website health",
+      "title": "Page titles rewritten for search",
+      "body": "Nine pages have clearer titles and descriptions in Google results."
+    },
+    {
+      "area": "Backups & history",
+      "title": "Monthly backup verified",
+      "body": "This month's backup was restored on a test copy and checked page by page."
+    }
+  ],
+  "nextMonth": [
+    "Apply this month's security patches",
+    "Check the contact form reaches both inboxes",
+    "Add the latest project to the Work page"
+  ],
+  "operations": {
+    "deployments": {
+      "succeeded": 2,
+      "total": 2
+    },
+    "runtimeErrors": {
+      "count": 0,
+      "days": 7
+    }
+  },
+  "attention": []
+}

@@ -489,6 +489,8 @@
     column-gap: 32px;
   }
   .detail__grid { row-gap: 12px; }
+  /* A short table keeps its row height instead of stretching to match its neighbour. */
+  .detail__tables { align-items: start; }
   .detail__note--wide { grid-column: 1 / -1; }
   .detail__note {
     margin-top: 8px;
@@ -636,7 +638,7 @@
       <div class="masthead__top">
         <img class="client-logo" src="{{clientLogo}}" alt="{{clientName}}">
         <p class="issue">
-          <span class="issue__label">Website care report, {{periodLabel}}</span>
+          <span class="issue__label">{{reportKind}}, {{periodLabel}}</span>
           <strong>{{clientDomain}}</strong><br>
           <span>Issued {{issuedDate}}</span>
         </p>
@@ -696,7 +698,7 @@
       <img class="band__logo" src="{{clientLogo}}" alt="{{clientName}}">
       <p class="band__title">
         <strong>The detail</strong>
-        <span>Website care report, {{periodLabel}}</span>
+        <span>{{reportKind}}, {{periodLabel}}</span>
       </p>
     </header>
 

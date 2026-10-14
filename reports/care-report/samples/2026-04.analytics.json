@@ -1,0 +1,226 @@
+{
+  "source": "Illustrative sample data",
+  "propertyId": "sample",
+  "period": "2026-04",
+  "fetchedAt": "2026-05-05T09:00:00.000Z",
+  "startDate": "2026-04-01",
+  "throughDate": "2026-04-30",
+  "trackingStarted": null,
+  "current": {
+    "visitors": 118,
+    "visits": 136,
+    "searchVisits": 17
+  },
+  "previous": {
+    "visitors": 109,
+    "visits": 125,
+    "searchVisits": 15
+  },
+  "detail": {
+    "pageViews": 203,
+    "engagementRate": 0.45,
+    "averageVisitSeconds": 73,
+    "channels": [
+      {
+        "name": "Direct",
+        "visits": 113
+      },
+      {
+        "name": "Search engines",
+        "visits": 17
+      },
+      {
+        "name": "Other websites",
+        "visits": 3
+      },
+      {
+        "name": "Social media",
+        "visits": 2
+      },
+      {
+        "name": "Other",
+        "visits": 1
+      }
+    ],
+    "landingPages": [
+      {
+        "name": "/",
+        "visits": 100
+      },
+      {
+        "name": "/about",
+        "visits": 16
+      },
+      {
+        "name": "/contact",
+        "visits": 6
+      },
+      {
+        "name": "/what-we-do",
+        "visits": 4
+      },
+      {
+        "name": "/how-we-work",
+        "visits": 3
+      },
+      {
+        "name": "/gallery",
+        "visits": 3
+      }
+    ],
+    "devices": [
+      {
+        "name": "Desktop",
+        "visits": 114
+      },
+      {
+        "name": "Mobile",
+        "visits": 21
+      },
+      {
+        "name": "Tablet",
+        "visits": 1
+      }
+    ],
+    "countries": [
+      {
+        "name": "United States",
+        "visits": 101
+      },
+      {
+        "name": "India",
+        "visits": 15
+      },
+      {
+        "name": "United Kingdom",
+        "visits": 6
+      },
+      {
+        "name": "Ireland",
+        "visits": 4
+      }
+    ],
+    "daily": [
+      {
+        "date": "2026-04-01",
+        "visits": 5
+      },
+      {
+        "date": "2026-04-02",
+        "visits": 7
+      },
+      {
+        "date": "2026-04-03",
+        "visits": 3
+      },
+      {
+        "date": "2026-04-04",
+        "visits": 4
+      },
+      {
+        "date": "2026-04-05",
+        "visits": 4
+      },
+      {
+        "date": "2026-04-06",
+        "visits": 3
+      },
+      {
+        "date": "2026-04-07",
+        "visits": 6
+      },
+      {
+        "date": "2026-04-08",
+        "visits": 8
+      },
+      {
+        "date": "2026-04-09",
+        "visits": 3
+      },
+      {
+        "date": "2026-04-10",
+        "visits": 5
+      },
+      {
+        "date": "2026-04-11",
+        "visits": 3
+      },
+      {
+        "date": "2026-04-12",
+        "visits": 2
+      },
+      {
+        "date": "2026-04-13",
+        "visits": 8
+      },
+      {
+        "date": "2026-04-14",
+        "visits": 3
+      },
+      {
+        "date": "2026-04-15",
+        "visits": 4
+      },
+      {
+        "date": "2026-04-16",
+        "visits": 6
+      },
+      {
+        "date": "2026-04-17",
+        "visits": 5
+      },
+      {
+        "date": "2026-04-18",
+        "visits": 3
+      },
+      {
+        "date": "2026-04-19",
+        "visits": 2
+      },
+      {
+        "date": "2026-04-20",
+        "visits": 2
+      },
+      {
+        "date": "2026-04-21",
+        "visits": 3
+      },
+      {
+        "date": "2026-04-22",
+        "visits": 5
+      },
+      {
+        "date": "2026-04-23",
+        "visits": 7
+      },
+      {
+        "date": "2026-04-24",
+        "visits": 4
+      },
+      {
+        "date": "2026-04-25",
+        "visits": 2
+      },
+      {
+        "date": "2026-04-26",
+        "visits": 3
+      },
+      {
+        "date": "2026-04-27",
+        "visits": 6
+      },
+      {
+        "date": "2026-04-28",
+        "visits": 5
+      },
+      {
+        "date": "2026-04-29",
+        "visits": 7
+      },
+      {
+        "date": "2026-04-30",
+        "visits": 8
+      }
+    ]
+  }
+}

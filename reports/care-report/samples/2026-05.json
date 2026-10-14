@@ -1,0 +1,79 @@
+{
+  "period": "2026-05",
+  "sample": true,
+  "issued": "2026-06-04",
+  "nextReport": "2026-07-06",
+  "headline": "Your website is up to date and secure.",
+  "headlineEmphasis": "up to date",
+  "summary": "In May we updated Next.js and React, fixed three broken links and made the gallery 41% lighter, so it opens faster on phones.",
+  "figures": [
+    {
+      "value": "12",
+      "label": [
+        "Packages",
+        "updated"
+      ]
+    },
+    {
+      "value": "41",
+      "unit": "%",
+      "label": [
+        "Gallery weight",
+        "reduced"
+      ]
+    },
+    {
+      "value": "3",
+      "label": [
+        "Broken links",
+        "fixed"
+      ]
+    },
+    {
+      "value": "3",
+      "label": [
+        "Deployments",
+        "shipped"
+      ]
+    }
+  ],
+  "improvementsNote": "The main changes this month, each tied to an area of ongoing care.",
+  "improvements": [
+    {
+      "area": "Software updates",
+      "title": "Next.js and React updated",
+      "body": "Both frameworks moved to their latest stable releases, with security fixes."
+    },
+    {
+      "area": "Website health",
+      "title": "Broken links on Work page fixed",
+      "body": "Three project links pointed to missing pages. All three now open correctly."
+    },
+    {
+      "area": "Code quality",
+      "title": "Gallery images compressed",
+      "body": "Gallery photos are 41% lighter, so the page opens faster on phones."
+    },
+    {
+      "area": "Monitoring",
+      "title": "Weekly log review in place",
+      "body": "We now read the server logs every week and act on anything unusual."
+    }
+  ],
+  "nextMonth": [
+    "Fix the mobile menu so it closes after a link is tapped",
+    "Describe every gallery image for screen readers",
+    "Rewrite page titles and descriptions for search"
+  ],
+  "operations": {
+    "deployments": {
+      "succeeded": 3,
+      "total": 3
+    },
+    "runtimeErrors": {
+      "count": 2,
+      "days": 7
+    }
+  },
+  "attention": []
+}
