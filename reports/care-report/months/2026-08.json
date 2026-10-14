@@ -64,5 +64,37 @@
     "Full review of the site's code, security and Google setup",
     "Set up Google Analytics and Search Console reporting",
     "Update the website's packages and frameworks"
+  ],
+  "healthRecords": [
+    {
+      "label": "Security certificate",
+      "value": "Valid",
+      "note": "Until 17 Oct 2026"
+    },
+    {
+      "label": "Domain renews",
+      "value": "5 Dec 2026",
+      "note": "With GoDaddy"
+    },
+    {
+      "label": "Deployments",
+      "value": "1 of 1",
+      "note": "Live on 26 August"
+    },
+    {
+      "label": "Security headers",
+      "value": "1 of 6",
+      "note": "5 still to add"
+    },
+    {
+      "label": "Error monitoring",
+      "value": "Live",
+      "note": "Since 26 August"
+    },
+    {
+      "label": "Next.js",
+      "value": "16.3.3",
+      "note": "Updated from 16.1.6"
+    }
   ]
 }

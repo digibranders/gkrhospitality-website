@@ -105,7 +105,7 @@ To run the fetch on another computer, copy the key file there privately (never b
 
 ## Months before tracking began
 
-A month that says `"tracked": false` has no GA4 or Search Console data and builds as one page. If it also has no `.health.json` (nobody checked the site that month), it shows no site health section and lists the standing monthly checks instead, rather than printing readings nobody took. August 2026 is built this way from its real work (commits on 26 August, live in deployment `e1ada0b`).
+A month that says `"tracked": false` has no GA4 or Search Console data and builds as one page. If it also has no `.health.json` (nobody checked the site that month), it shows no site health section and lists the standing monthly checks instead, rather than printing readings nobody took. Such a month can list `healthRecords` instead: three, four, six or eight site health facts taken from records, each a `label`, `value` and `note`. They show as a Site health section headed "From the <month> records". August 2026 is built this way from its real work (commits on 26 August, live in deployment `e1ada0b`). Its records come from the certificate transparency log (certificate issued 19 July, expiring 17 October), the domain registry, Vercel (one production deployment on 26 August), `next.config.ts` at `e1ada0b` (no headers of its own, so only Vercel's HTTPS enforcement) and commit `95a97e7` (Sentry added, Next.js 16.1.6 to 16.3.3).
 
 ## Sample reports (April to August 2026)
 

@@ -139,6 +139,11 @@ export interface MonthlyReport {
    * The report is then one page with no visitor or search numbers.
    */
   tracked: boolean;
+  /**
+   * For a month nobody ran the health check: site health facts taken from
+   * records (certificate logs, the registry, Vercel, the code), entered by hand.
+   */
+  healthRecords: { label: string; value: string; note: string }[];
 }
 
 export class ReportValidationError extends Error {
@@ -176,6 +181,9 @@ const LIMITS = {
   careCheck: 28,
   attentionTitle: 60,
   attentionDetail: 140,
+  tileLabel: 24,
+  tileValue: 14,
+  tileNote: 30,
   nextMonthItem: 72, // one line at 11.5px across the content column
   short: 60,
 } as const;
@@ -451,7 +459,18 @@ export function parseMonth(input: unknown, config: ReportConfig, source = "month
     ),
     sample: root.sample === true,
     tracked: root.tracked !== false,
+    healthRecords: (c.array(root.healthRecords ?? [], "healthRecords") ?? []).map((raw, i) => {
+      const item = c.record(raw, `healthRecords[${i}]`) ?? {};
+      return {
+        label: c.text(item.label, `healthRecords[${i}].label`, LIMITS.tileLabel),
+        value: c.text(item.value, `healthRecords[${i}].value`, LIMITS.tileValue),
+        note: c.text(item.note, `healthRecords[${i}].note`, LIMITS.tileNote),
+      };
+    }),
   };
+  if (month.healthRecords.length > 0 && ![3, 4, 6, 8].includes(month.healthRecords.length)) {
+    c.fail("healthRecords", `must have 3, 4, 6 or 8 items to fill the tile rows (found ${month.healthRecords.length})`);
+  }
   if (month.attention.length > MAX_ATTENTION) {
     c.fail("attention", `must have at most ${MAX_ATTENTION} items to fit the box (found ${month.attention.length})`);
   }
@@ -1201,13 +1220,15 @@ function renderHealthTiles(tiles: HealthTile[]): string {
 
 /** Site health: on page 2 of a full report, or on the single page of an untracked month. */
 function renderHealthSection(checked: string, tiles: HealthTile[]): string {
+  // Three or six tiles sit in three columns; four or eight in four.
+  const columns = tiles.length % 3 === 0 && tiles.length % 4 !== 0 ? " tiles--three" : "";
   return [
     '    <section class="section detail" aria-labelledby="health-title">',
     '      <div class="section__title">',
     '        <h2 id="health-title">Site health</h2>',
     `        <p>${escapeHtml(checked)}</p>`,
     "      </div>",
-    '      <ul class="tiles">',
+    `      <ul class="tiles${columns}">`,
     renderHealthTiles(tiles),
     "      </ul>",
     "    </section>",
@@ -1266,6 +1287,9 @@ export function renderReport(
   // A month nobody checked (no health readings) shows no health section rather than invented readings.
   const checkedAt = health ? new Date(health.checkedAt) : null;
   const attention = [...(health && checkedAt ? attentionFromHealth(health, checkedAt) : []), ...month.attention];
+  if (health && month.healthRecords.length > 0) {
+    throw new Error(`${month.period} has health readings, so it must not also list "healthRecords".`);
+  }
   const healthSection =
     health && checkedAt
       ? renderHealthSection(
@@ -1274,7 +1298,12 @@ export function renderReport(
             : `Checked ${formatDate(health.checkedAt.slice(0, 10))}.`,
           healthTiles(health, month, search ? search.indexing : null, checkedAt, config.searchConsole.pageNames),
         )
-      : "";
+      : month.healthRecords.length > 0
+        ? renderHealthSection(
+            `From the ${period.monthName} records: certificate logs, the domain registry, Vercel and the code.`,
+            month.healthRecords.map((record) => ({ ...record, flag: false })),
+          )
+        : "";
   const values: Record<string, string> = {
     pageTitle: escapeHtml(`${config.client.name}, Website Care Report, ${period.label}`),
     heroImage: escapeHtml(month.heroImage ?? config.client.heroImage),
@@ -1302,7 +1331,7 @@ export function renderReport(
     onePageSections:
       search && analytics
         ? ""
-        : `${healthSection}\n${renderOnePagePlans(nextMonthName, month.nextMonth, health ? null : renderCareAreas(config.careAreas))}`,
+        : `${healthSection}\n${renderOnePagePlans(nextMonthName, month.nextMonth, healthSection ? null : renderCareAreas(config.careAreas))}`,
     // An illustrative report says so in the masthead and the page 2 band.
     reportKind: month.sample ? "Sample website care report" : "Website care report",
     nextMonth: renderNextMonth(month.nextMonth),

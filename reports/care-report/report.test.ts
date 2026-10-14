@@ -39,6 +39,7 @@ const config = parseConfig(rawConfig);
 const month = (): Record<string, unknown> => ({
   ...(JSON.parse(JSON.stringify(readJson("./months/2026-08.json"))) as Record<string, unknown>),
   tracked: true,
+  healthRecords: [],
   operations: { deployments: { succeeded: 4, total: 4 }, runtimeErrors: { count: 0, days: 7 } },
   attention: [],
   nextMonth: ["Add a content security policy", "Count contact form enquiries in Google Analytics"],
@@ -470,6 +471,19 @@ describe("renderReport: months before tracking began", () => {
     expect(html).not.toContain("Site health");
     expect(html).toContain("<h2>Checked every month</h2>");
     expect(html).toContain("<h2>Coming in September</h2>");
+  });
+
+  it("shows recorded health facts in three columns when nobody ran the health check", () => {
+    const records = [
+      { label: "Security certificate", value: "Valid", note: "Until 17 Oct 2026" },
+      { label: "Domain renews", value: "5 Dec 2026", note: "With GoDaddy" },
+      { label: "Deployments", value: "1 of 1", note: "Live on 26 August" },
+    ];
+    const html = renderReport(template, config, parseMonth({ ...month(), tracked: false, healthRecords: records }, config), null, null, null);
+    expect(html).toContain('<ul class="tiles tiles--three">');
+    expect(html).toContain("From the August records: certificate logs, the domain registry, Vercel and the code.");
+    expect(html).not.toContain("<h2>Checked every month</h2>");
+    expect(problemsOf(() => parseMonth({ ...month(), healthRecords: records.slice(0, 2) }, config)).join("\n")).toMatch(/healthRecords/);
   });
 
   it("refuses data that does not match the month's tracking", () => {
