@@ -6,7 +6,7 @@
   "nextReport": "2026-08-28",
   "headline": "Your website is secure and running smoothly.",
   "headlineEmphasis": "secure",
-  "summary": "In July we applied six security patches, made sure every enquiry reaches both inboxes and published a new project page.",
+  "summary": "In July we applied six security patches, made sure every enquiry reaches both inboxes and made the contact page load faster.",
   "figures": [
     {
       "value": "6",
@@ -24,10 +24,11 @@
       ]
     },
     {
-      "value": "1",
+      "value": "0.6",
+      "unit": "s",
       "label": [
-        "Project",
-        "published"
+        "Contact page",
+        "faster"
       ]
     },
     {
@@ -52,8 +53,8 @@
     },
     {
       "area": "Code quality",
-      "title": "New project added to Work page",
-      "body": "The latest project now has its own page with photos and a summary."
+      "title": "Contact page loads faster",
+      "body": "The form's spam check now loads after the page, saving 0.6 seconds."
     },
     {
       "area": "Monitoring",
@@ -72,7 +73,7 @@
       "total": 3
     },
     "runtimeErrors": {
-      "count": 1,
+      "count": 0,
       "days": 7
     }
   },

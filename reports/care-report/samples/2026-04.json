@@ -64,7 +64,7 @@
   "nextMonth": [
     "Update Next.js and React to their latest stable releases",
     "Fix the broken project links on the Work page",
-    "Compress the largest gallery images"
+    "Trace the errors showing on the Work page"
   ],
   "operations": {
     "deployments": {

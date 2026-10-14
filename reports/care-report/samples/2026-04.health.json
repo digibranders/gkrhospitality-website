@@ -35,8 +35,8 @@
   "audit": {
     "critical": 0,
     "high": 0,
-    "moderate": 12,
-    "low": 8
+    "moderate": 31,
+    "low": 18
   },
   "versions": {
     "next": "16.0.3",

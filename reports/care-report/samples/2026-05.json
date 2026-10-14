@@ -6,7 +6,7 @@
   "nextReport": "2026-07-06",
   "headline": "Your website is up to date and secure.",
   "headlineEmphasis": "up to date",
-  "summary": "In May we updated Next.js and React, fixed three broken links and made the gallery 41% lighter, so it opens faster on phones.",
+  "summary": "In May we updated Next.js and React, fixed three broken project links and cleared four errors on the Work page.",
   "figures": [
     {
       "value": "12",
@@ -16,18 +16,17 @@
       ]
     },
     {
-      "value": "41",
-      "unit": "%",
-      "label": [
-        "Gallery weight",
-        "reduced"
-      ]
-    },
-    {
       "value": "3",
       "label": [
         "Broken links",
         "fixed"
+      ]
+    },
+    {
+      "value": "4",
+      "label": [
+        "Page errors",
+        "cleared"
       ]
     },
     {
@@ -52,8 +51,8 @@
     },
     {
       "area": "Code quality",
-      "title": "Gallery images compressed",
-      "body": "Gallery photos are 41% lighter, so the page opens faster on phones."
+      "title": "Work page errors cleared",
+      "body": "Four browser errors on the Work page were traced and fixed."
     },
     {
       "area": "Monitoring",
@@ -62,9 +61,9 @@
     }
   ],
   "nextMonth": [
-    "Fix the mobile menu so it closes after a link is tapped",
-    "Describe every gallery image for screen readers",
-    "Rewrite page titles and descriptions for search"
+    "Fix the reviews layout on small screens",
+    "Rewrite page titles and descriptions for search",
+    "Review who has access to the hosting account"
   ],
   "operations": {
     "deployments": {
@@ -72,7 +71,7 @@
       "total": 3
     },
     "runtimeErrors": {
-      "count": 2,
+      "count": 0,
       "days": 7
     }
   },

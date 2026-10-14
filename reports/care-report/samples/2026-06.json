@@ -4,17 +4,10 @@
   "tracked": false,
   "issued": "2026-07-06",
   "nextReport": "2026-08-04",
-  "headline": "Your website is healthy and easier to use.",
+  "headline": "Your website is healthy and easier to find.",
   "headlineEmphasis": "healthy",
-  "summary": "In June we fixed the mobile menu, described every gallery image for screen readers and rewrote nine page titles for search.",
+  "summary": "In June we rewrote nine page titles for search, fixed the reviews layout on phones and removed two old hosting accounts.",
   "figures": [
-    {
-      "value": "38",
-      "label": [
-        "Images",
-        "described"
-      ]
-    },
     {
       "value": "9",
       "label": [
@@ -23,9 +16,16 @@
       ]
     },
     {
+      "value": "2",
+      "label": [
+        "Old accounts",
+        "removed"
+      ]
+    },
+    {
       "value": "1",
       "label": [
-        "Mobile issue",
+        "Layout issue",
         "fixed"
       ]
     },
@@ -41,18 +41,18 @@
   "improvements": [
     {
       "area": "Website health",
-      "title": "Mobile menu closes after a tap",
-      "body": "The menu used to stay open after choosing a page. It now closes as expected."
-    },
-    {
-      "area": "Code quality",
-      "title": "Gallery images described",
-      "body": "All 38 gallery images now have text descriptions for screen readers."
+      "title": "Page titles rewritten for search",
+      "body": "Nine pages have clearer titles and descriptions in Google results."
     },
     {
       "area": "Website health",
-      "title": "Page titles rewritten for search",
-      "body": "Nine pages have clearer titles and descriptions in Google results."
+      "title": "Reviews fit on small screens",
+      "body": "Long reviews ran off the edge on phones. They now wrap neatly."
+    },
+    {
+      "area": "Security",
+      "title": "Old hosting accounts removed",
+      "body": "Two accounts that no longer needed access to the hosting were removed."
     },
     {
       "area": "Backups & history",
@@ -63,7 +63,7 @@
   "nextMonth": [
     "Apply this month's security patches",
     "Check the contact form reaches both inboxes",
-    "Add the latest project to the Work page"
+    "Speed up the contact page"
   ],
   "operations": {
     "deployments": {
