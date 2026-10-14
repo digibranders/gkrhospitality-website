@@ -335,6 +335,7 @@ describe("renderReport: page 1", () => {
     expect(html).toContain("What we improved in August");
     expect(html).toContain("Page 1 of 2");
     expect(html).toContain("Page 2 of 2");
+    expect(html).toContain("<span>Issued August 2026</span>");
   });
 
   it("shows visitors and search at a glance, with a visits-per-day chart", () => {
