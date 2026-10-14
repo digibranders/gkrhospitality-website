@@ -105,14 +105,15 @@ To run the fetch on another computer, copy the key file there privately (never b
 
 ## Sample reports (April to August 2026)
 
-Search Console and Google Analytics were set up in September 2026, so no measured data exists for earlier months. `samples/` holds illustrative reports for April to August 2026 in the same design, with synthetic figures that trend towards the real September numbers. The August sample keeps the copy of the original August report; its data is synthetic like the rest.
+Search Console and Google Analytics were set up in September 2026, so no visitor or search data exists for earlier months. `samples/` holds illustrative reports for April to August 2026: the maintenance work, key figures, site health readings and plans are illustrative, and there are no visitor or search numbers at all. The August sample keeps the copy of the original August report.
 
 ```bash
 npm run report -- 2026-04 --sample
 ```
 
-- Every file in `samples/` says `"sample": true`, and `--sample` refuses any month file that does not. A month in `months/` that says `"sample": true` is refused too, so synthetic and measured data cannot mix.
-- A sample report labels itself: the masthead and the page 2 band read "Sample website care report", every source line reads "Illustrative figures" instead of naming Google, and the file name ends in `-Sample`.
+- **One page.** Each sample month says `"tracked": false`, so it has no `.search.json` or `.analytics.json` and builds as a single page: masthead, figures, improvements, site health and next month's plan. Site health shows average load time in place of Google indexing.
+- **Kept apart from real months.** Every file in `samples/` says `"sample": true`, and `--sample` refuses any month file that does not. A month in `months/` that says `"sample": true` is refused too.
+- **Labelled.** The masthead reads "Sample website care report", the site health line reads "Illustrative readings", and the file name ends in `-Sample`.
 - Output goes to `output/samples/<period>/`.
 
 ## House rules the build enforces
@@ -137,7 +138,7 @@ npm run report -- 2026-04 --sample
 | `months/YYYY-MM.search.json` | The month's search numbers, written by `npm run report:search`. |
 | `months/YYYY-MM.analytics.json` | The month's GA4 numbers, written by `npm run report:analytics`. |
 | `months/YYYY-MM.health.json` | The live site and code readings, written by `npm run report:health`. |
-| `samples/` | Illustrative April to August 2026 reports with synthetic data. See "Sample reports". |
+| `samples/` | Illustrative one-page April to August 2026 reports. See "Sample reports". |
 | `report.ts` | Validation, rendering and layout checks. Pure functions, covered by `report.test.ts`. |
 | `search-console.ts` | Search Console and URL Inspection response handling. Pure, covered by `search-console.test.ts`. |
 | `analytics.ts` | GA4 Data API response handling. Pure, covered by `analytics.test.ts`. |

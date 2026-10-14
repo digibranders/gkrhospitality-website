@@ -134,6 +134,11 @@ export interface MonthlyReport {
    * figures cannot be mistaken for measured ones.
    */
   sample: boolean;
+  /**
+   * False for months before GA4 and Search Console were set up (September 2026).
+   * The report is then one page with no visitor or search numbers.
+   */
+  tracked: boolean;
 }
 
 export class ReportValidationError extends Error {
@@ -445,6 +450,7 @@ export function parseMonth(input: unknown, config: ReportConfig, source = "month
       c.text(line, `nextMonth[${i}]`, LIMITS.nextMonthItem),
     ),
     sample: root.sample === true,
+    tracked: root.tracked !== false,
   };
   if (month.attention.length > MAX_ATTENTION) {
     c.fail("attention", `must have at most ${MAX_ATTENTION} items to fit the box (found ${month.attention.length})`);
@@ -454,6 +460,7 @@ export function parseMonth(input: unknown, config: ReportConfig, source = "month
   }
   if (root.heroImage !== undefined) month.heroImage = c.asset(root.heroImage, "heroImage");
   if (root.sample !== undefined && typeof root.sample !== "boolean") c.fail("sample", "must be true or false");
+  if (root.tracked !== undefined && typeof root.tracked !== "boolean") c.fail("tracked", "must be true or false");
 
   c.throwIfAny(source);
   return month;
@@ -1091,7 +1098,13 @@ interface HealthTile {
   flag: boolean;
 }
 
-function healthTiles(health: HealthReport, month: MonthlyReport, indexing: Indexing, now: Date): HealthTile[] {
+function healthTiles(
+  health: HealthReport,
+  month: MonthlyReport,
+  indexing: Indexing | null,
+  now: Date,
+  pageNames: Record<string, string>,
+): HealthTile[] {
   const daysUntil = (iso: string): number => Math.floor((Date.parse(`${iso}T00:00:00Z`) - now.getTime()) / 86_400_000);
   // "2026-12-05" becomes "5 Dec 2026", short enough for a quarter-width tile.
   const shortDay = (iso: string): string => {
@@ -1122,16 +1135,24 @@ function healthTiles(health: HealthReport, month: MonthlyReport, indexing: Index
       note: health.pages.failing.length ? `Not loading: ${health.pages.failing.map((p) => p.path).join(", ")}` : "Every page checked",
       flag: health.pages.failing.length > 0,
     },
-    {
-      label: "Indexed by Google",
-      value: `${indexing.pagesIndexed} of ${indexing.pagesChecked}`,
-      note: !indexing.notIndexed.length
-        ? "Every page checked"
-        : indexing.notIndexed.length > 2
-          ? `${indexing.notIndexed.length} pages not indexed`
-          : `Missing: ${indexing.notIndexed.join(", ")}`,
-      flag: indexing.notIndexed.length > 0,
-    },
+    // Indexing comes from Search Console; a month without it shows page speed instead.
+    indexing
+      ? {
+          label: "Indexed by Google",
+          value: `${indexing.pagesIndexed} of ${indexing.pagesChecked}`,
+          note: !indexing.notIndexed.length
+            ? "Every page checked"
+            : indexing.notIndexed.length > 2
+              ? `${indexing.notIndexed.length} pages not indexed`
+              : `Missing: ${indexing.notIndexed.join(", ")}`,
+          flag: indexing.notIndexed.length > 0,
+        }
+      : {
+          label: "Average load time",
+          value: `${numberFormat.format(health.pages.averageMs)} ms`,
+          note: health.pages.slowest ? `Slowest: ${pageName(health.pages.slowest.path, pageNames)}` : "Every page checked",
+          flag: false,
+        },
     {
       label: "Deployments",
       value: `${deployments.succeeded} of ${deployments.total}`,
@@ -1177,6 +1198,35 @@ function renderHealthTiles(tiles: HealthTile[]): string {
     .join("\n");
 }
 
+/** Site health: on page 2 of a full report, or on the single page of an untracked month. */
+function renderHealthSection(checked: string, tiles: HealthTile[]): string {
+  return [
+    '    <section class="section detail" aria-labelledby="health-title">',
+    '      <div class="section__title">',
+    '        <h2 id="health-title">Site health</h2>',
+    `        <p>${escapeHtml(checked)}</p>`,
+    "      </div>",
+    '      <ul class="tiles">',
+    renderHealthTiles(tiles),
+    "      </ul>",
+    "    </section>",
+  ].join("\n");
+}
+
+/** Next month's plan for a one-page report; the standing monthly checks are left out to fit. */
+function renderOnePagePlans(nextMonthName: string, items: string[]): string {
+  return [
+    '    <section class="plans" aria-label="Next month">',
+    '      <div class="plans__next">',
+    `        <h2>Coming in ${escapeHtml(nextMonthName)}</h2>`,
+    "        <ul>",
+    renderNextMonth(items),
+    "        </ul>",
+    "      </div>",
+    "    </section>",
+  ].join("\n");
+}
+
 function renderNextMonth(items: string[]): string {
   return items.map((item) => `        <li>${escapeHtml(item)}</li>`).join("\n");
 }
@@ -1190,16 +1240,30 @@ export function renderReport(
   template: string,
   config: ReportConfig,
   month: MonthlyReport,
-  search: SearchReport,
-  analytics: AnalyticsReport,
+  search: SearchReport | null,
+  analytics: AnalyticsReport | null,
   health: HealthReport,
 ): string {
+  if (month.tracked !== Boolean(search && analytics)) {
+    throw new Error(
+      month.tracked
+        ? `${month.period} is tracked, so it needs both the search and the analytics data.`
+        : `${month.period} says "tracked": false, so it must not be given search or analytics data.`,
+    );
+  }
   const period = formatPeriod(month.period);
   const previousMonth = formatPeriod(previousPeriod(month.period)).monthName;
   const nextMonthName = formatPeriod(nextPeriod(month.period)).monthName;
   // Dates in the report are judged against when the site was checked, so a rebuild gives the same PDF.
   const checkedAt = new Date(health.checkedAt);
   const attention = [...attentionFromHealth(health, checkedAt), ...month.attention];
+  const healthChecked = month.sample
+    ? `Illustrative readings, ${formatDate(health.checkedAt.slice(0, 10))}.`
+    : `Checked ${formatDate(health.checkedAt.slice(0, 10))}.`;
+  const healthSection = renderHealthSection(
+    healthChecked,
+    healthTiles(health, month, search ? search.indexing : null, checkedAt, config.searchConsole.pageNames),
+  );
   const values: Record<string, string> = {
     pageTitle: escapeHtml(`${config.client.name}, Website Care Report, ${period.label}`),
     heroImage: escapeHtml(month.heroImage ?? config.client.heroImage),
@@ -1214,18 +1278,19 @@ export function renderReport(
     figures: renderFigures(month.figures),
     improvementsNote: escapeHtml(month.improvementsNote),
     improvements: renderImprovements(month.improvements),
-    dataSources: escapeHtml(describeSources(analytics, search, month.period, month.sample)),
-    searchIndexing: escapeHtml(describeIndexing(search.indexing)),
-    glance: renderGlance(search, analytics, period.monthName, previousMonth),
+    // A month without tracking is one page: its visitor and search sections are empty and hidden.
+    reportLayout: search && analytics ? "report--full" : "report--single",
+    pageOneLabel: search && analytics ? "Page 1 of 2" : "",
+    dataSources: search && analytics ? escapeHtml(describeSources(analytics, search, month.period, month.sample)) : "",
+    searchIndexing: search ? escapeHtml(describeIndexing(search.indexing)) : "",
+    glance: search && analytics ? renderGlance(search, analytics, period.monthName, previousMonth) : "",
     attention: renderAttention(attention),
-    searchDetail: renderSearchDetail(search, config, month.period, period.monthName, month.sample),
-    visitorDetail: renderVisitorDetail(analytics, config, month.sample),
-    healthChecked: escapeHtml(
-      month.sample ? `Illustrative readings, ${formatDate(health.checkedAt.slice(0, 10))}.` : `Checked ${formatDate(health.checkedAt.slice(0, 10))}.`,
-    ),
+    searchDetail: search ? renderSearchDetail(search, config, month.period, period.monthName, month.sample) : "",
+    visitorDetail: analytics ? renderVisitorDetail(analytics, config, month.sample) : "",
+    detailHealth: search && analytics ? healthSection : "",
+    onePageSections: search && analytics ? "" : `${healthSection}\n${renderOnePagePlans(nextMonthName, month.nextMonth)}`,
     // An illustrative report says so in the masthead and the page 2 band.
     reportKind: month.sample ? "Sample website care report" : "Website care report",
-    healthTiles: renderHealthTiles(healthTiles(health, month, search.indexing, checkedAt)),
     nextMonth: renderNextMonth(month.nextMonth),
     careAreas: renderCareAreas(config.careAreas),
     agencyWordmark: escapeHtml(config.agency.wordmark),

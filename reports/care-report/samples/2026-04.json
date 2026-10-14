@@ -1,6 +1,7 @@
 {
   "period": "2026-04",
   "sample": true,
+  "tracked": false,
   "issued": "2026-05-05",
   "nextReport": "2026-06-04",
   "headline": "Your website is stable and fully monitored.",

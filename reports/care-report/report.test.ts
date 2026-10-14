@@ -448,6 +448,30 @@ describe("renderReport: sample reports", () => {
   });
 });
 
+describe("renderReport: months before tracking began", () => {
+  const untracked = (): string =>
+    renderReport(template, config, parseMonth({ ...month(), tracked: false }, config), null, null, testHealth());
+
+  it("renders one page with health and next month's plan, and no visitor or search numbers", () => {
+    const html = untracked();
+    expect(html).toContain('<body class="report--single">');
+    expect(html).not.toContain("Page 1 of 2");
+    expect(html).not.toContain('class="stat__value"');
+    expect(html).not.toContain('class="dtable__name"');
+    expect(html).toContain("Average load time");
+    expect(html).toContain("Slowest: About");
+    expect(html).not.toContain("Indexed by Google");
+    expect(html).toContain("<h2>Coming in September</h2>");
+  });
+
+  it("refuses data that does not match the month's tracking", () => {
+    expect(() => renderReport(template, config, parseMonth(month(), config), null, null, testHealth())).toThrow(/needs both/);
+    expect(() =>
+      renderReport(template, config, parseMonth({ ...month(), tracked: false }, config), testSearch(), testAnalytics(), testHealth()),
+    ).toThrow(/must not be given/);
+  });
+});
+
 describe("renderReport: health tiles", () => {
   it("counts long lists instead of naming every item", () => {
     const health = { ...testHealth(), headers: { present: ["HTTPS enforced (HSTS)"], missing: ["A", "B", "C", "D", "E"] } };

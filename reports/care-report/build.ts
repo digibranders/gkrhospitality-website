@@ -42,8 +42,8 @@ const SAMPLES_DIR = join(ROOT, "samples");
 const OUTPUT_DIR = join(ROOT, "output");
 const PERIOD = /^\d{4}-\d{2}$/;
 const CHROME_TIMEOUT_MS = 60_000;
-/** The report is two US Letter pages: the story, then the detail. */
-const PAGE_COUNT = 2;
+/** Two US Letter pages (the story, then the detail); one page for a month before tracking began. */
+const pageCount = (tracked: boolean): number => (tracked ? 2 : 1);
 
 const CHROME_CANDIDATES = [
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
@@ -173,17 +173,18 @@ function build(period: string, sample: boolean): void {
     );
   }
 
+  // A month before tracking began ("tracked": false) has no search or GA4 data and is never given any.
   const searchPath = join(dataDir, `${period}.search.json`);
-  if (!existsSync(searchPath)) {
+  if (month.tracked && !existsSync(searchPath)) {
     throw new BuildError(`No search data for ${period}. Run: npm run report:search -- ${period}`);
   }
-  const search = parseSearch(readJson(searchPath), period, `${dirName}/${period}.search.json`);
+  const search = month.tracked ? parseSearch(readJson(searchPath), period, `${dirName}/${period}.search.json`) : null;
 
   const analyticsPath = join(dataDir, `${period}.analytics.json`);
-  if (!existsSync(analyticsPath)) {
+  if (month.tracked && !existsSync(analyticsPath)) {
     throw new BuildError(`No GA4 data for ${period}. Run: npm run report:analytics -- ${period}`);
   }
-  const analytics = parseAnalytics(readJson(analyticsPath), period, `${dirName}/${period}.analytics.json`);
+  const analytics = month.tracked ? parseAnalytics(readJson(analyticsPath), period, `${dirName}/${period}.analytics.json`) : null;
 
   const healthPath = join(dataDir, `${period}.health.json`);
   if (!existsSync(healthPath)) {
@@ -212,8 +213,8 @@ function build(period: string, sample: boolean): void {
 
   if (!existsSync(pdfPath)) throw new BuildError("Chrome exited without writing a PDF.");
   const pages = countPdfPages(readFileSync(pdfPath).toString("latin1"));
-  if (pages !== PAGE_COUNT) {
-    throw new BuildError(`The PDF is ${pages} pages; it must be ${PAGE_COUNT}. Check template.html for changes to the page size.`);
+  if (pages !== pageCount(month.tracked)) {
+    throw new BuildError(`The PDF is ${pages} pages; it must be ${pageCount(month.tracked)}. Check template.html for changes to the page size.`);
   }
 
   console.log(`Built ${formatRelative(pdfPath)}`);

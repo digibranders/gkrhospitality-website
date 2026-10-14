@@ -305,6 +305,24 @@
   .page:not(.page--detail) > .search,
   .page:not(.page--detail) > .attention { margin-top: auto; }
 
+  /*
+   * One-page report for a month before tracking began: no visitor or search
+   * numbers, so site health and next month's plan move up from page 2.
+   */
+  .report--single .page--detail,
+  .report--single .search { display: none; }
+  .report--single .page:not(.page--detail) > .detail { margin-top: auto; }
+  .report--single .page:not(.page--detail) > .detail::before {
+    content: "";
+    grid-column: 1 / -1;
+    height: 1px;
+    margin-bottom: 12px;
+    background: var(--hairline);
+  }
+  /* The plans band sits directly on the stone footer, one block at the foot of the page. */
+  .report--single .page:not(.page--detail) > .plans { flex: none; margin-top: auto; padding-bottom: 4px; }
+  .report--single .page:not(.page--detail) > .signoff { margin-top: 0; }
+
   /* ---------- Search results ---------- */
   .search {
     padding-bottom: 13px;
@@ -627,7 +645,7 @@
 
 </style>
 </head>
-<body>
+<body class="{{reportLayout}}">
   <main class="page">
 
     <header class="masthead">
@@ -678,6 +696,8 @@
 
 {{attention}}
 
+{{onePageSections}}
+
     <footer class="signoff signoff--plain">
       <div class="signoff__inner">
         <div class="signoff__by">
@@ -685,7 +705,7 @@
           <span>{{serviceName}}</span>
           <span class="signoff__url">{{agencyDomain}}</span>
         </div>
-        <div class="signoff__next">Page 1 of 2</div>
+        <div class="signoff__next">{{pageOneLabel}}</div>
       </div>
     </footer>
 
@@ -709,15 +729,7 @@
 {{visitorDetail}}
     </section>
 
-    <section class="section detail" aria-labelledby="health-title">
-      <div class="section__title">
-        <h2 id="health-title">Site health</h2>
-        <p>{{healthChecked}}</p>
-      </div>
-      <ul class="tiles">
-{{healthTiles}}
-      </ul>
-    </section>
+{{detailHealth}}
 
     <section class="plans" aria-label="Plans and standing care">
       <div class="plans__next">

@@ -1,6 +1,7 @@
 {
   "period": "2026-05",
   "sample": true,
+  "tracked": false,
   "issued": "2026-06-04",
   "nextReport": "2026-07-06",
   "headline": "Your website is up to date and secure.",

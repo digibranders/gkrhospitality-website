@@ -1,6 +1,7 @@
 {
   "period": "2026-06",
   "sample": true,
+  "tracked": false,
   "issued": "2026-07-06",
   "nextReport": "2026-08-04",
   "headline": "Your website is healthy and easier to use.",
