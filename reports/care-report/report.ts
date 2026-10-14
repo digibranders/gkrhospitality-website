@@ -117,11 +117,11 @@ export interface MonthlyReport {
   figures: Figure[];
   improvementsNote: string;
   improvements: Improvement[];
-  /** Figures only Vercel knows; entered by hand from the Vercel dashboard. */
+  /** Figures only Vercel knows; entered by hand from the Vercel dashboard. Null for a month with no health check. */
   operations: {
     deployments: { succeeded: number; total: number };
     runtimeErrors: { count: number; days: number };
-  };
+  } | null;
   /** Extra items for "Needs your attention", on top of those the health check raises. */
   attention: AttentionItem[];
   /** What is planned for next month, one line each. */
@@ -347,7 +347,7 @@ export function parseConfig(input: unknown): ReportConfig {
   return config;
 }
 
-function operations(c: Checker, raw: unknown): MonthlyReport["operations"] {
+function operations(c: Checker, raw: unknown): NonNullable<MonthlyReport["operations"]> {
   const ops = c.record(raw, "operations") ?? {};
   const deployments = c.record(ops.deployments, "operations.deployments") ?? {};
   const errors = c.record(ops.runtimeErrors, "operations.runtimeErrors") ?? {};
@@ -438,7 +438,7 @@ export function parseMonth(input: unknown, config: ReportConfig, source = "month
         body: c.text(item.body, `improvements[${i}].body`, LIMITS.improvementBody),
       };
     }),
-    operations: operations(c, root.operations),
+    operations: root.operations === undefined ? null : operations(c, root.operations),
     attention: (c.array(root.attention ?? [], "attention") ?? []).map((raw, i) => {
       const item = c.record(raw, `attention[${i}]`) ?? {};
       return {
@@ -1111,6 +1111,7 @@ function healthTiles(
     const [day, monthName, year] = formatDate(iso).split(" ");
     return `${day} ${monthName.slice(0, 3)} ${year}`;
   };
+  if (!month.operations) throw new Error(`${month.period} has site health readings, so it needs "operations" from Vercel.`);
   const { deployments, runtimeErrors } = month.operations;
   const alerts = health.audit;
   // Serious (critical and high) alerts are counted on their own, so a total never borrows the worst severity's name.
@@ -1213,8 +1214,11 @@ function renderHealthSection(checked: string, tiles: HealthTile[]): string {
   ].join("\n");
 }
 
-/** Next month's plan for a one-page report; the standing monthly checks are left out to fit. */
-function renderOnePagePlans(nextMonthName: string, items: string[]): string {
+/**
+ * Next month's plan for a one-page report. The standing monthly checks only
+ * fit when there is no site health section above them.
+ */
+function renderOnePagePlans(nextMonthName: string, items: string[], careAreas: string | null): string {
   return [
     '    <section class="plans" aria-label="Next month">',
     '      <div class="plans__next">',
@@ -1223,6 +1227,9 @@ function renderOnePagePlans(nextMonthName: string, items: string[]): string {
     renderNextMonth(items),
     "        </ul>",
     "      </div>",
+    ...(careAreas
+      ? ['      <div class="areas-wrap">', "        <h2>Checked every month</h2>", '        <ul class="areas">', careAreas, "        </ul>", "      </div>"]
+      : []),
     "    </section>",
   ].join("\n");
 }
@@ -1242,8 +1249,9 @@ export function renderReport(
   month: MonthlyReport,
   search: SearchReport | null,
   analytics: AnalyticsReport | null,
-  health: HealthReport,
+  health: HealthReport | null,
 ): string {
+  if (month.tracked && !health) throw new Error(`${month.period} is tracked, so it needs site health readings.`);
   if (month.tracked !== Boolean(search && analytics)) {
     throw new Error(
       month.tracked
@@ -1255,15 +1263,18 @@ export function renderReport(
   const previousMonth = formatPeriod(previousPeriod(month.period)).monthName;
   const nextMonthName = formatPeriod(nextPeriod(month.period)).monthName;
   // Dates in the report are judged against when the site was checked, so a rebuild gives the same PDF.
-  const checkedAt = new Date(health.checkedAt);
-  const attention = [...attentionFromHealth(health, checkedAt), ...month.attention];
-  const healthChecked = month.sample
-    ? `Illustrative readings, ${formatDate(health.checkedAt.slice(0, 10))}.`
-    : `Checked ${formatDate(health.checkedAt.slice(0, 10))}.`;
-  const healthSection = renderHealthSection(
-    healthChecked,
-    healthTiles(health, month, search ? search.indexing : null, checkedAt, config.searchConsole.pageNames),
-  );
+  // A month nobody checked (no health readings) shows no health section rather than invented readings.
+  const checkedAt = health ? new Date(health.checkedAt) : null;
+  const attention = [...(health && checkedAt ? attentionFromHealth(health, checkedAt) : []), ...month.attention];
+  const healthSection =
+    health && checkedAt
+      ? renderHealthSection(
+          month.sample
+            ? `Illustrative readings, ${formatDate(health.checkedAt.slice(0, 10))}.`
+            : `Checked ${formatDate(health.checkedAt.slice(0, 10))}.`,
+          healthTiles(health, month, search ? search.indexing : null, checkedAt, config.searchConsole.pageNames),
+        )
+      : "";
   const values: Record<string, string> = {
     pageTitle: escapeHtml(`${config.client.name}, Website Care Report, ${period.label}`),
     heroImage: escapeHtml(month.heroImage ?? config.client.heroImage),
@@ -1288,7 +1299,10 @@ export function renderReport(
     searchDetail: search ? renderSearchDetail(search, config, month.period, period.monthName, month.sample) : "",
     visitorDetail: analytics ? renderVisitorDetail(analytics, config, month.sample) : "",
     detailHealth: search && analytics ? healthSection : "",
-    onePageSections: search && analytics ? "" : `${healthSection}\n${renderOnePagePlans(nextMonthName, month.nextMonth)}`,
+    onePageSections:
+      search && analytics
+        ? ""
+        : `${healthSection}\n${renderOnePagePlans(nextMonthName, month.nextMonth, health ? null : renderCareAreas(config.careAreas))}`,
     // An illustrative report says so in the masthead and the page 2 band.
     reportKind: month.sample ? "Sample website care report" : "Website care report",
     nextMonth: renderNextMonth(month.nextMonth),

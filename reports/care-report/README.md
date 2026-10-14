@@ -103,6 +103,10 @@ Set up once on 29 September 2026. Nothing here needs doing again unless the key 
 
 To run the fetch on another computer, copy the key file there privately (never by email or chat), or create a new key: Google Cloud > IAM & Admin > Service Accounts > GKR care report > Keys > Add key > JSON. If a key might have leaked, delete it on that same page; the old file stops working at once.
 
+## Months before tracking began
+
+A month that says `"tracked": false` has no GA4 or Search Console data and builds as one page. If it also has no `.health.json` (nobody checked the site that month), it shows no site health section and lists the standing monthly checks instead, rather than printing readings nobody took. August 2026 is built this way from its real work (commits on 26 August, live in deployment `e1ada0b`).
+
 ## Sample reports (April to August 2026)
 
 Search Console and Google Analytics were set up in September 2026, so no visitor or search data exists for earlier months. `samples/` holds illustrative reports for April to August 2026: the maintenance work, key figures, site health readings and plans are illustrative, and there are no visitor or search numbers at all. The August sample keeps the copy of the original August report.

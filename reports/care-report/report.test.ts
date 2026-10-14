@@ -38,6 +38,7 @@ const config = parseConfig(rawConfig);
  */
 const month = (): Record<string, unknown> => ({
   ...(JSON.parse(JSON.stringify(readJson("./months/2026-08.json"))) as Record<string, unknown>),
+  tracked: true,
   operations: { deployments: { succeeded: 4, total: 4 }, runtimeErrors: { count: 0, days: 7 } },
   attention: [],
   nextMonth: ["Add a content security policy", "Count contact form enquiries in Google Analytics"],
@@ -176,7 +177,7 @@ describe("parseMonth", () => {
     expect(parseMonth(month(), config).improvements).toHaveLength(4);
     const september = parseMonth(readJson("./months/2026-09.json"), config);
     expect(september.improvements).toHaveLength(4);
-    expect(september.operations.deployments).toEqual({ succeeded: 6, total: 6 });
+    expect(september.operations?.deployments).toEqual({ succeeded: 6, total: 6 });
   });
 
   it("rejects em-dashes and en-dashes anywhere in the copy", () => {
@@ -461,6 +462,13 @@ describe("renderReport: months before tracking began", () => {
     expect(html).toContain("Average load time");
     expect(html).toContain("Slowest: About");
     expect(html).not.toContain("Indexed by Google");
+    expect(html).toContain("<h2>Coming in September</h2>");
+  });
+
+  it("shows the monthly checks instead of a health section when the month has no health readings", () => {
+    const html = renderReport(template, config, parseMonth({ ...month(), tracked: false }, config), null, null, null);
+    expect(html).not.toContain("Site health");
+    expect(html).toContain("<h2>Checked every month</h2>");
     expect(html).toContain("<h2>Coming in September</h2>");
   });
 

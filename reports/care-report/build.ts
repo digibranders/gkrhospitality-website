@@ -186,11 +186,12 @@ function build(period: string, sample: boolean): void {
   }
   const analytics = month.tracked ? parseAnalytics(readJson(analyticsPath), period, `${dirName}/${period}.analytics.json`) : null;
 
+  // An untracked month may have no health readings (nobody checked); the report then has no health section.
   const healthPath = join(dataDir, `${period}.health.json`);
-  if (!existsSync(healthPath)) {
+  if (month.tracked && !existsSync(healthPath)) {
     throw new BuildError(`No site health readings for ${period}. Run: npm run report:health -- ${period}`);
   }
-  const health = parseHealth(readJson(healthPath), `${dirName}/${period}.health.json`);
+  const health = existsSync(healthPath) ? parseHealth(readJson(healthPath), `${dirName}/${period}.health.json`) : null;
 
   const template = readFileSync(join(ROOT, "template.html"), "utf8");
   const html = inlineAssets(renderReport(template, config, month, search, analytics, health), (assetPath) => {
