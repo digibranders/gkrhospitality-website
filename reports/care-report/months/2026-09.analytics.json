@@ -2,32 +2,32 @@
   "source": "Google Analytics 4",
   "propertyId": "552679084",
   "period": "2026-09",
-  "fetchedAt": "2026-09-29T10:25:49.026Z",
+  "fetchedAt": "2026-10-14T09:37:47.917Z",
   "startDate": "2026-09-03",
-  "throughDate": "2026-09-28",
+  "throughDate": "2026-09-30",
   "trackingStarted": "2026-09-03",
   "current": {
-    "visitors": 165,
-    "visits": 189,
-    "searchVisits": 47
+    "visitors": 175,
+    "visits": 204,
+    "searchVisits": 52
   },
   "previous": null,
   "detail": {
-    "pageViews": 261,
-    "engagementRate": 0.471,
-    "averageVisitSeconds": 72,
+    "pageViews": 302,
+    "engagementRate": 0.5,
+    "averageVisitSeconds": 82,
     "channels": [
       {
         "name": "Direct",
-        "visits": 134
+        "visits": 145
       },
       {
         "name": "Search engines",
-        "visits": 47
+        "visits": 52
       },
       {
         "name": "Other websites",
-        "visits": 3
+        "visits": 5
       },
       {
         "name": "Social media",
@@ -35,21 +35,25 @@
       },
       {
         "name": "Other",
-        "visits": 9
+        "visits": 1
       }
     ],
     "landingPages": [
       {
         "name": "/",
-        "visits": 142
+        "visits": 153
       },
       {
         "name": "/about",
-        "visits": 23
+        "visits": 25
       },
       {
         "name": "/contact",
-        "visits": 8
+        "visits": 9
+      },
+      {
+        "name": "/what-we-do",
+        "visits": 2
       },
       {
         "name": "/how-we-work",
@@ -58,20 +62,16 @@
       {
         "name": "/privacy-policy",
         "visits": 1
-      },
-      {
-        "name": "/what-we-do",
-        "visits": 1
       }
     ],
     "devices": [
       {
         "name": "Desktop",
-        "visits": 161
+        "visits": 174
       },
       {
         "name": "Mobile",
-        "visits": 28
+        "visits": 30
       },
       {
         "name": "Smart tv",
@@ -81,11 +81,11 @@
     "countries": [
       {
         "name": "United States",
-        "visits": 142
+        "visits": 150
       },
       {
         "name": "India",
-        "visits": 20
+        "visits": 26
       },
       {
         "name": "Ireland",
@@ -192,6 +192,14 @@
       {
         "date": "2026-09-28",
         "visits": 10
+      },
+      {
+        "date": "2026-09-29",
+        "visits": 7
+      },
+      {
+        "date": "2026-09-30",
+        "visits": 8
       }
     ]
   }
