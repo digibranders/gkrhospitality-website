@@ -4,9 +4,10 @@
  * Pure functions only. File and Chrome access live in build.ts, so everything
  * here is covered by report.test.ts without touching the disk or a browser.
  */
-import { monthRange, nextPeriod, previousPeriod } from "./periods.ts";
+import { monthRange, nextPeriod, previousPeriod, propertyDate } from "./periods.ts";
 import { barList, dailyColumns, fillDays } from "./charts.ts";
-import { attentionFromHealth, registrarName } from "./health.ts";
+import { CERTIFICATE_WARNING_DAYS, DOMAIN_WARNING_DAYS, attentionFromHealth, registrarName } from "./health.ts";
+import { normalizePath } from "./search-console.ts";
 import type { DayStats, DeviceStats, Indexing, PageStats, QueryStats, Totals } from "./search-console.ts";
 import type { AnalyticsTotals, Ranked, VisitorDetail } from "./analytics.ts";
 import type { AttentionItem, HealthReport } from "./health.ts";
@@ -165,6 +166,8 @@ const FIGURE_COUNT = 4;
 const MAX_IMPROVEMENTS = 4;
 const MAX_TABLE_ROWS = 5;
 const MAX_ATTENTION = 3;
+/** Hand-written items plus those the health check raises, which can be 4 on its own. */
+const MAX_ATTENTION_TOTAL = 4;
 const MAX_NEXT_MONTH = 5;
 const CARE_AREA_COUNT = 6;
 const LIMITS = {
@@ -614,7 +617,7 @@ function visitorDetail(c: Checker, raw: unknown): VisitorDetail {
 }
 
 /** Validates months/YYYY-MM.health.json, the file fetch-health.ts writes. */
-export function parseHealth(input: unknown, source = "health file"): HealthReport {
+export function parseHealth(input: unknown, period: string, source = "health file"): HealthReport {
   const c = new Checker();
   const root = c.record(input, "health") ?? {};
   const tls = c.record(root.tls, "tls") ?? {};
@@ -654,7 +657,15 @@ export function parseHealth(input: unknown, source = "health file"): HealthRepor
     },
     versions: { next: c.text(versions.next, "versions.next", 20), react: c.text(versions.react, "versions.react", 20) },
   };
-  if (report.checkedAt && Number.isNaN(Date.parse(report.checkedAt))) c.fail("checkedAt", "must be a date and time");
+  if (report.checkedAt) {
+    const checkedAt = new Date(report.checkedAt);
+    if (Number.isNaN(checkedAt.getTime())) c.fail("checkedAt", "must be a date and time");
+    // Checks often run just after the month ends, so only an earlier one is wrong.
+    else if (propertyDate(checkedAt) < monthRange(period).startDate) c.fail("checkedAt", `is before ${period}; check the site again`);
+  }
+  if (report.pages.ok + report.pages.failing.length !== report.pages.checked) {
+    c.fail("pages", "ok plus failing must equal checked");
+  }
   c.throwIfAny(source);
   return report;
 }
@@ -745,7 +756,7 @@ const HTML_ESCAPES: Record<string, string> = {
   "'": "&#39;",
 };
 
-export function escapeHtml(text: string): string {
+function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]);
 }
 
@@ -790,6 +801,10 @@ function lowerFirstWord(text: string): string {
   return /^[A-Z][a-z]/.test(text) ? text.charAt(0).toLowerCase() + text.slice(1) : text;
 }
 
+function capitalise(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 function renderCareAreas(areas: CareArea[]): string {
   return areas
     .map((area) => {
@@ -806,6 +821,17 @@ function renderCareAreas(areas: CareArea[]): string {
 
 const numberFormat = new Intl.NumberFormat("en-US");
 const compactFormat = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
+const percentFormat = new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 0 });
+
+/** A share as a whole percent, where a non-zero part never reads "0%" and a part smaller than the whole never "100%". */
+function formatShare(part: number, whole: number): string {
+  // Capped at 100%: GA4's per-device session counts can add up to slightly more than the month's total.
+  const ratio = whole > 0 ? Math.min(1, part / whole) : 0;
+  const text = percentFormat.format(ratio);
+  if (ratio > 0 && text === "0%") return "under 1%";
+  if (ratio < 1 && text === "100%") return "over 99%";
+  return text;
+}
 
 /**
  * Big numbers for the stat row. Each stat column is about 100px wide, which
@@ -828,7 +854,9 @@ export function describeChange(
       ? { text: `Level with ${previousMonthName}`, direction: "level" }
       : { text: `Up from 0 in ${previousMonthName}`, direction: "up" };
   }
-  const percent = Math.round(((current - previous) / previous) * 100);
+  const rounded = Math.round(((current - previous) / previous) * 100);
+  // "Down 100%" would say nothing is left.
+  const percent = current > 0 ? Math.max(-99, rounded) : rounded;
   if (percent > 0) return { text: `Up ${numberFormat.format(percent)}% on ${previousMonthName}`, direction: "up" };
   if (percent < 0) return { text: `Down ${numberFormat.format(-percent)}% on ${previousMonthName}`, direction: "down" };
   return { text: `Level with ${previousMonthName}`, direction: "level" };
@@ -841,8 +869,8 @@ function renderChange(current: number, previous: number | null, previousMonthNam
 }
 
 /** Readable page name from config, falling back to the path itself. */
-export function pageName(path: string, pageNames: Record<string, string>): string {
-  return pageNames[path] ?? path;
+function pageName(path: string, pageNames: Record<string, string>): string {
+  return pageNames[path] ?? pageNames[normalizePath(path)] ?? path;
 }
 
 /** "2026-09-02" to "2026-09-28" becomes "2 to 28 September". Both dates are in the same month. */
@@ -877,7 +905,7 @@ function renderStat(value: number, label: string, change: string): string {
 }
 
 /** "10 of 10 pages indexed by Google." */
-export function describeIndexing(indexing: Indexing): string {
+function describeIndexing(indexing: Indexing): string {
   const all = indexing.pagesIndexed === indexing.pagesChecked;
   return all
     ? `All ${indexing.pagesChecked} pages indexed by Google.`
@@ -898,7 +926,7 @@ function renderGlance(search: SearchReport, analytics: AnalyticsReport, monthNam
       ? `<div class="stat__change">${escapeHtml(`Tracking began ${formatDate(analytics.trackingStarted).split(" ").slice(0, 2).join(" ")}`)}</div>`
       : renderChange(current, previous, previousMonthName);
   // With no month to compare against, search visits show their share of all visits instead.
-  const searchShare = visitors.visits > 0 ? Math.round((visitors.searchVisits / visitors.visits) * 100) : 0;
+  const searchShare = formatShare(visitors.searchVisits, visitors.visits);
   const stats = [
     renderStat(visitors.visitors, "Visitors", visitorChange(visitors.visitors, before ? before.visitors : null)),
     renderStat(
@@ -906,7 +934,7 @@ function renderGlance(search: SearchReport, analytics: AnalyticsReport, monthNam
       "Search visits",
       before
         ? renderChange(visitors.searchVisits, before.searchVisits, previousMonthName)
-        : `<div class="stat__change">${escapeHtml(`${searchShare}% of all visits`)}</div>`,
+        : `<div class="stat__change">${escapeHtml(capitalise(`${searchShare} of all visits`))}</div>`,
     ),
   ];
   const perf = search.performance;
@@ -914,7 +942,7 @@ function renderGlance(search: SearchReport, analytics: AnalyticsReport, monthNam
     const previous = perf.previousTotals;
     // With no month to compare against, show what the month itself says instead of "no data" twice.
     const note = (text: string): string => `<div class="stat__change">${escapeHtml(text)}</div>`;
-    const clickRate = perf.totals.impressions > 0 ? Math.round((perf.totals.clicks / perf.totals.impressions) * 100) : 0;
+    const clickRate = formatShare(perf.totals.clicks, perf.totals.impressions);
     stats.push(
       renderStat(
         perf.totals.impressions,
@@ -926,7 +954,7 @@ function renderGlance(search: SearchReport, analytics: AnalyticsReport, monthNam
       renderStat(
         perf.totals.clicks,
         "Clicks",
-        previous ? renderChange(perf.totals.clicks, previous.clicks, previousMonthName) : note(`${clickRate}% of impressions`),
+        previous ? renderChange(perf.totals.clicks, previous.clicks, previousMonthName) : note(capitalise(`${clickRate} of impressions`)),
       ),
     );
   } else {
@@ -964,8 +992,6 @@ function renderAttention(items: AttentionItem[]): string {
 }
 
 /* ---------- Page 2 ---------- */
-
-const percentFormat = new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 0 });
 
 function facts(items: [label: string, value: string][]): string {
   return [
@@ -1026,9 +1052,8 @@ function renderSearchDetail(search: SearchReport, config: ReportConfig, period: 
     ].join("\n");
   }
   const range = monthRange(period);
-  const ctr = perf.totals.impressions > 0 ? perf.totals.clicks / perf.totals.impressions : 0;
   const railFacts = facts([
-    ["Click rate", percentFormat.format(ctr)],
+    ["Click rate", capitalise(formatShare(perf.totals.clicks, perf.totals.impressions))],
     ["Average position", perf.totals.position.toFixed(1)],
     ...perf.devices.slice(0, 2).map((d): [string, string] => [`Shown on ${d.device.toLowerCase()}`, numberFormat.format(d.impressions)]),
   ]);
@@ -1067,8 +1092,7 @@ function formatDuration(seconds: number): string {
  * better as words than as a chart, and take one line instead of two lists.
  */
 function audienceNote(d: VisitorDetail, totalVisits: number): string {
-  // Capped at 100%: GA4's per-device session counts can add up to slightly more than the month's total.
-  const share = (part: number): string => percentFormat.format(totalVisits > 0 ? Math.min(1, part / totalVisits) : 0);
+  const share = (part: number): string => formatShare(part, totalVisits);
   const devices = d.devices
     .filter((item) => item.name !== "Other")
     .slice(0, 2)
@@ -1078,7 +1102,7 @@ function audienceNote(d: VisitorDetail, totalVisits: number): string {
     devices.length ? `Visits were ${devices.join(" and ")}` : "",
     country ? `${share(country.visits)} came from ${country.name === "United States" ? "the United States" : country.name}` : "",
   ].filter(Boolean);
-  return parts.length ? `        <p class="detail__note detail__note--wide">${escapeHtml(`${parts.join(", and ")}.`)}</p>` : "";
+  return parts.length ? `        <p class="detail__note detail__note--wide">${escapeHtml(capitalise(`${parts.join(", and ")}.`))}</p>` : "";
 }
 
 function renderVisitorDetail(analytics: AnalyticsReport, config: ReportConfig, sample: boolean): string {
@@ -1136,18 +1160,20 @@ function healthTiles(
   // Serious (critical and high) alerts are counted on their own, so a total never borrows the worst severity's name.
   const serious = alerts.critical + alerts.high;
   const minor = alerts.moderate + alerts.low;
+  // validTo is a UTC date, so it is compared with the check's UTC day: a certificate is still valid on its last day.
+  const expired = health.tls.validTo < now.toISOString().slice(0, 10);
   return [
     {
       label: "Security certificate",
-      value: "Valid",
-      note: `Until ${shortDay(health.tls.validTo)}`,
-      flag: daysUntil(health.tls.validTo) <= 14,
+      value: expired ? "Expired" : "Valid",
+      note: `${expired ? "On" : "Until"} ${shortDay(health.tls.validTo)}`,
+      flag: daysUntil(health.tls.validTo) <= CERTIFICATE_WARNING_DAYS,
     },
     {
       label: "Domain renews",
       value: shortDay(health.domain.expires),
       note: `With ${registrarName(health.domain.registrar)}`,
-      flag: daysUntil(health.domain.expires) <= 90,
+      flag: daysUntil(health.domain.expires) <= DOMAIN_WARNING_DAYS,
     },
     {
       label: "Pages responding",
@@ -1175,8 +1201,8 @@ function healthTiles(
         },
     {
       label: "Deployments",
-      value: `${deployments.succeeded} of ${deployments.total}`,
-      note: "Succeeded this month",
+      value: deployments.total === 0 ? "None" : `${deployments.succeeded} of ${deployments.total}`,
+      note: deployments.total === 0 ? "No site changes this month" : "Succeeded this month",
       flag: deployments.succeeded < deployments.total,
     },
     {
@@ -1286,16 +1312,21 @@ export function renderReport(
   // Dates in the report are judged against when the site was checked, so a rebuild gives the same PDF.
   // A month nobody checked (no health readings) shows no health section rather than invented readings.
   const checkedAt = health ? new Date(health.checkedAt) : null;
-  const attention = [...(health && checkedAt ? attentionFromHealth(health, checkedAt) : []), ...month.attention];
+  const raised = health && checkedAt ? attentionFromHealth(health, checkedAt) : [];
+  const attention = [...raised, ...month.attention];
+  if (attention.length > MAX_ATTENTION_TOTAL) {
+    throw new Error(
+      `${month.period} has ${attention.length} attention items (${raised.length} from the health check, ${month.attention.length} written by hand); ` +
+        `the box holds at most ${MAX_ATTENTION_TOTAL}. Remove some from "attention" in the month file.`,
+    );
+  }
   if (health && month.healthRecords.length > 0) {
     throw new Error(`${month.period} has health readings, so it must not also list "healthRecords".`);
   }
   const healthSection =
     health && checkedAt
       ? renderHealthSection(
-          month.sample
-            ? `Illustrative readings, ${formatDate(health.checkedAt.slice(0, 10))}.`
-            : `Checked ${formatDate(health.checkedAt.slice(0, 10))}.`,
+          month.sample ? `Illustrative readings, ${formatDate(propertyDate(checkedAt))}.` : `Checked ${formatDate(propertyDate(checkedAt))}.`,
           healthTiles(health, month, search ? search.indexing : null, checkedAt, config.searchConsole.pageNames),
         )
       : month.healthRecords.length > 0

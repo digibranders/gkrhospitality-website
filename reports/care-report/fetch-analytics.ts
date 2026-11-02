@@ -6,8 +6,9 @@
  *
  * Signs in as the read-only service account (Viewer on the GA4 property) and
  * records visitors, visits and search visits for the month and the month
- * before. When GA4 has no earlier data, it records the day tracking began so
- * the report can say so instead of comparing with an empty month.
+ * before (the same days of it for a part month). When GA4 has no earlier data,
+ * it records the day tracking began so the report can say so instead of
+ * comparing with an empty month.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -27,8 +28,8 @@ import {
   totalsFromReport,
 } from "./analytics.ts";
 import { SCOPES } from "./google-auth.ts";
-import { accessToken } from "./google-client.ts";
-import { isMonthComplete, monthRange, previousPeriod, yesterday } from "./periods.ts";
+import { accessToken, fetchWithTimeout, readApiJson } from "./google-client.ts";
+import { isMonthComplete, monthRange, previousPeriod, previousSpan, yesterday } from "./periods.ts";
 import { parseAnalytics, parseConfig } from "./report.ts";
 import type { AnalyticsReport, VisitorFigures } from "./report.ts";
 import type { VisitorDetail } from "./analytics.ts";
@@ -39,22 +40,18 @@ const PERIOD = /^\d{4}-\d{2}$/;
 type Range = { startDate: string; endDate: string };
 
 async function runReport(token: string, propertyId: string, body: object): Promise<unknown> {
-  const response = await fetch(runReportEndpoint(propertyId), {
+  const response = await fetchWithTimeout(runReportEndpoint(propertyId), {
     method: "POST",
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
     body: JSON.stringify(body),
   });
-  const result = (await response.json()) as { error?: { message?: string } };
   if (response.status === 403) {
     throw new AnalyticsError(
       `The service account cannot read GA4 property ${propertyId}. In GA4 > Admin > Property access management, ` +
         "add the service account's email as a Viewer.",
     );
   }
-  if (!response.ok) {
-    throw new AnalyticsError(`GA4 returned ${response.status}: ${result.error?.message ?? "no details"}`);
-  }
-  return result;
+  return readApiJson(response, "GA4", (message) => new AnalyticsError(message));
 }
 
 async function figuresFor(token: string, propertyId: string, range: Range): Promise<VisitorFigures | null> {
@@ -120,9 +117,10 @@ async function fetchAnalytics(period: string, partial: boolean): Promise<void> {
   const token = await accessToken(SCOPES.analytics);
 
   const current: Range = { startDate: month.startDate, endDate: throughDate };
+  const wholePrevious = monthRange(previousPeriod(period));
   const [currentFigures, previousFigures, days, detail] = await Promise.all([
     figuresFor(token, propertyId, current),
-    figuresFor(token, propertyId, monthRange(previousPeriod(period))),
+    figuresFor(token, propertyId, complete ? wholePrevious : previousSpan(period, throughDate)),
     runReport(token, propertyId, { dateRanges: [current], dimensions: [{ name: "date" }], metrics: [{ name: "sessions" }] }),
     detailFor(token, propertyId, current),
   ]);
@@ -130,7 +128,9 @@ async function fetchAnalytics(period: string, partial: boolean): Promise<void> {
     throw new AnalyticsError(`GA4 property ${propertyId} has no visits between ${current.startDate} and ${current.endDate}.`);
   }
   // With nothing in the previous month, record when tracking began so the report does not compare with an empty month.
-  const trackingStarted = previousFigures ? null : firstDataDate(days);
+  // A part month's span can be empty on its own, so only the whole month being empty means tracking just began.
+  const earlierData = previousFigures ?? (complete ? null : await figuresFor(token, propertyId, wholePrevious));
+  const trackingStarted = earlierData ? null : firstDataDate(days);
 
   const report: AnalyticsReport = {
     source: "Google Analytics 4",

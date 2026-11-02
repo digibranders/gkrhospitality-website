@@ -251,13 +251,13 @@ describe("parseSearch, parseAnalytics and parseHealth", () => {
     expect(parseSearch(testSearch(), "2026-08").performance?.queries).toHaveLength(4);
     expect(parseSearch({ ...testSearch(), performance: null }, "2026-08").performance).toBeNull();
     expect(parseAnalytics(testAnalytics(), "2026-08").detail.channels[0].name).toBe("Direct");
-    expect(parseHealth(testHealth()).domain.expires).toBe("2026-12-05");
+    expect(parseHealth(testHealth(), "2026-08").domain.expires).toBe("2026-12-05");
   });
 
   it("accept the committed September 2026 data files", () => {
     expect(parseSearch(readJson("./months/2026-09.search.json"), "2026-09").property).toBe("https://www.gkrhospitality.com/");
     expect(parseAnalytics(readJson("./months/2026-09.analytics.json"), "2026-09").trackingStarted).toBe("2026-09-03");
-    expect(parseHealth(readJson("./months/2026-09.health.json")).pages.checked).toBe(10);
+    expect(parseHealth(readJson("./months/2026-09.health.json"), "2026-09").pages.checked).toBe(10);
   });
 
   it("reject search data from a different month, impossible numbers and too many rows", () => {
@@ -292,7 +292,23 @@ describe("parseSearch, parseAnalytics and parseHealth", () => {
 
   it("reject health readings with impossible dates", () => {
     const data = { ...testHealth(), tls: { validTo: "2026-13-40", issuer: "x" } };
-    expect(problemsOf(() => parseHealth(data)).join("\n")).toMatch(/tls\.validTo/);
+    expect(problemsOf(() => parseHealth(data, "2026-08")).join("\n")).toMatch(/tls\.validTo/);
+  });
+
+  it("reject a health check that is unreadable or from before the month, and allow one after it ends", () => {
+    const at = (checkedAt: string): HealthReport => ({ ...testHealth(), checkedAt });
+    expect(problemsOf(() => parseHealth(at("yesterday"), "2026-09")).join("\n")).toMatch(/checkedAt.*date and time/);
+    expect(problemsOf(() => parseHealth(at("2026-08-31T10:00:00.000Z"), "2026-09")).join("\n")).toMatch(/checkedAt.*before 2026-09/);
+    // Still 31 August in New York, the date the report would print.
+    expect(problemsOf(() => parseHealth(at("2026-09-01T02:00:00.000Z"), "2026-09")).join("\n")).toMatch(/checkedAt.*before 2026-09/);
+    expect(parseHealth(at("2026-09-01T10:00:00.000Z"), "2026-09").pages.ok).toBe(10);
+    expect(parseHealth(at("2026-10-02T10:00:00.000Z"), "2026-09").pages.ok).toBe(10);
+  });
+
+  it("reject page counts that do not add up", () => {
+    const base = testHealth();
+    const data = { ...base, pages: { ...base.pages, ok: 9 } };
+    expect(problemsOf(() => parseHealth(data, "2026-08")).join("\n")).toMatch(/pages.*ok plus failing must equal checked/);
   });
 });
 
@@ -316,6 +332,11 @@ describe("formatting", () => {
     expect(describeChange(100, 100, "July")).toEqual({ text: "Level with July", direction: "level" });
     expect(describeChange(3, 0, "July")).toEqual({ text: "Up from 0 in July", direction: "up" });
     expect(describeChange(3, null, "July")).toEqual({ text: "No July data to compare", direction: "none" });
+  });
+
+  it("only says down 100% when nothing is left", () => {
+    expect(describeChange(1, 1000, "July")).toEqual({ text: "Down 99% on July", direction: "down" });
+    expect(describeChange(0, 1000, "July")).toEqual({ text: "Down 100% on July", direction: "down" });
   });
 
   it("shortens long names from the middle so similar queries stay distinguishable", () => {
@@ -384,6 +405,42 @@ describe("renderReport: page 1", () => {
     expect(html).toContain("Google Analytics, 2 to 28 August.");
     expect(html).not.toContain("No July data");
   });
+
+  it("never rounds a share of search visits or clicks to 0% or 100%", () => {
+    const perf = testSearch().performance;
+    if (!perf) throw new Error("fixture has performance");
+    const withShares = (searchVisits: number, clicks: number): string =>
+      render({
+        analytics: { ...testAnalytics(), previous: null, current: { visitors: 900, visits: 1000, searchVisits } },
+        search: { ...testSearch(), performance: { ...perf, previousTotals: null, totals: { clicks, impressions: 1000, position: 3 } } },
+      });
+    const small = withShares(1, 2);
+    expect(small).toContain('<div class="stat__change">Under 1% of all visits</div>');
+    expect(small).toContain('<div class="stat__change">Under 1% of impressions</div>');
+    const large = withShares(999, 998);
+    expect(large).toContain('<div class="stat__change">Over 99% of all visits</div>');
+    expect(large).toContain('<div class="stat__change">Over 99% of impressions</div>');
+    const none = withShares(0, 0);
+    expect(none).toContain('<div class="stat__change">0% of all visits</div>');
+    expect(none).toContain('<div class="stat__change">0% of impressions</div>');
+  });
+
+  it("refuses more attention items than the box holds, counting the health check's own", () => {
+    const health = { ...testHealth(), audit: { critical: 0, high: 1, moderate: 0, low: 0 } };
+    health.tls = { ...health.tls, validTo: "2026-10-01" };
+    health.pages = { ...health.pages, ok: 9, failing: [{ path: "/work", status: 500 }] };
+    const item = { title: "Please send the new photos", detail: "We need them for the gallery." };
+    expect(render({ health })).toContain("Needs your attention");
+    expect(() => render({ health, monthData: { ...month(), attention: [item] } })).toThrow(
+      /5 attention items \(4 from the health check, 1 written by hand\).*at most 4/,
+    );
+  });
+
+  it("still allows three hand-written items and no more", () => {
+    const item = { title: "Please send the new photos", detail: "We need them for the gallery." };
+    expect(render({ monthData: { ...month(), attention: [item, item, item] } })).toContain("Please send the new photos");
+    expect(problemsOf(() => parseMonth({ ...month(), attention: [item, item, item, item] }, config)).join("\n")).toMatch(/attention.*at most 3/);
+  });
 });
 
 describe("renderReport: page 2", () => {
@@ -404,6 +461,44 @@ describe("renderReport: page 2", () => {
     expect(html).toContain("Where visits came from");
     expect(html).toContain('<span class="barlist__label">Search engines</span>');
     expect(html).toContain("Visits were 85% on desktop and 15% on mobile, and 75% came from the United States.");
+  });
+
+  it("never rounds a device, country or click rate share to 0% or 100%", () => {
+    const base = testAnalytics();
+    const analytics: AnalyticsReport = {
+      ...base,
+      current: { visitors: 900, visits: 1000, searchVisits: 47 },
+      detail: {
+        ...base.detail,
+        devices: [
+          { name: "Desktop", visits: 998 },
+          { name: "Mobile", visits: 2 },
+        ],
+        countries: [{ name: "India", visits: 3 }],
+      },
+    };
+    const perf = testSearch().performance;
+    if (!perf) throw new Error("fixture has performance");
+    const html = render({ analytics, search: { ...testSearch(), performance: { ...perf, totals: { clicks: 1, impressions: 1000, position: 3 } } } });
+    expect(html).toContain("Visits were over 99% on desktop and under 1% on mobile, and under 1% came from India.");
+    expect(html).toContain("<dt>Click rate</dt><dd>Under 1%</dd>");
+  });
+
+  it("starts the audience note with a capital when a small country share comes first", () => {
+    const base = testAnalytics();
+    const analytics: AnalyticsReport = {
+      ...base,
+      current: { visitors: 900, visits: 1000, searchVisits: 47 },
+      detail: { ...base.detail, devices: [], countries: [{ name: "India", visits: 3 }] },
+    };
+    expect(render({ analytics })).toContain("Under 1% came from India.");
+  });
+
+  it("prints the check date as it was in New York", () => {
+    const html = render({ health: { ...testHealth(), checkedAt: "2026-09-30T02:00:00.000Z" } });
+    expect(html).toContain("Checked 29 September 2026.");
+    const sample = render({ monthData: { ...month(), sample: true }, health: { ...testHealth(), checkedAt: "2026-09-30T02:00:00.000Z" } });
+    expect(sample).toContain("Illustrative readings, 29 September 2026.");
   });
 
   it("shows site health with real values, flagging the domain renewal", () => {
@@ -495,6 +590,43 @@ describe("renderReport: months before tracking began", () => {
 });
 
 describe("renderReport: health tiles", () => {
+  const tile = (html: string, label: string): string | undefined =>
+    new RegExp(`<li class="tile[^"]*">\\s*<span class="tile__label">${label}</span>[\\s\\S]*?</li>`).exec(html)?.[0];
+
+  it("shows a certificate as expired once its date has passed, and valid on its last day", () => {
+    const expired = tile(render({ health: { ...testHealth(), tls: { ...testHealth().tls, validTo: "2026-09-28" } } }), "Security certificate");
+    expect(expired).toContain('class="tile tile--flag"');
+    expect(expired).toContain('<span class="tile__value">Expired</span>');
+    expect(expired).toContain("On 28 Sep 2026");
+    const lastDay = tile(render({ health: { ...testHealth(), tls: { ...testHealth().tls, validTo: "2026-09-29" } } }), "Security certificate");
+    expect(lastDay).toContain('<span class="tile__value">Valid</span>');
+    expect(lastDay).toContain("Until 29 Sep 2026");
+  });
+
+  it("says so plainly when the month had no deployments", () => {
+    const operations = { deployments: { succeeded: 0, total: 0 }, runtimeErrors: { count: 0, days: 7 } };
+    const none = tile(render({ monthData: { ...month(), operations } }), "Deployments");
+    expect(none).toContain('<span class="tile__value">None</span>');
+    expect(none).toContain("No site changes this month");
+    expect(none).not.toContain("tile--flag");
+    expect(tile(render(), "Deployments")).toContain('<span class="tile__value">4 of 4</span>');
+  });
+
+  it("finds a page's name when the sitemap lists it with a trailing slash or a query string", () => {
+    const withSlowest = (path: string): string =>
+      renderReport(
+        template,
+        config,
+        parseMonth({ ...month(), tracked: false }, config),
+        null,
+        null,
+        { ...testHealth(), pages: { ...testHealth().pages, slowest: { path, ms: 40 } } },
+      );
+    expect(withSlowest("/about/")).toContain("Slowest: About");
+    expect(withSlowest("/about?ref=x")).toContain("Slowest: About");
+    expect(withSlowest("/unnamed/")).toContain("Slowest: /unnamed/");
+  });
+
   it("counts long lists instead of naming every item", () => {
     const health = { ...testHealth(), headers: { present: ["HTTPS enforced (HSTS)"], missing: ["A", "B", "C", "D", "E"] } };
     const search = { ...testSearch(), indexing: { ...testSearch().indexing, pagesIndexed: 2, notIndexed: ["/a", "/b", "/c", "/d", "/e", "/f", "/g", "/h"] } };

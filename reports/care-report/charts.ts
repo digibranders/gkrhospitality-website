@@ -68,7 +68,7 @@ export function dailyColumns(
 
   const bars = days
     .map((d, i) => {
-      const h = max > 0 ? (d.value / max) * plot : 0;
+      const h = d.value > 0 ? Math.max(1, (d.value / max) * plot) : 0;
       const x = i * slot + (slot - bar) / 2;
       return barPath(Number(round1(x)), Number(round1(top + plot - h)), Number(round1(bar)), Number(round1(h)));
     })

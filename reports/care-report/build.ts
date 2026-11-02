@@ -126,14 +126,14 @@ function printToPdf(chrome: string, htmlPath: string, pdfPath: string): void {
 function checkLayout(chrome: string, html: string, outDir: string): void {
   const probePath = join(outDir, ".layout-probe.html");
   const dumpPath = join(outDir, ".layout-probe.dom");
-  writeFileSync(probePath, withLayoutProbe(html));
-  const fd = openSync(dumpPath, "w");
   try {
-    runChrome(chrome, ["--dump-dom", pathToFileURL(probePath).href], fd, "measure the layout");
-  } finally {
-    closeSync(fd);
-  }
-  try {
+    writeFileSync(probePath, withLayoutProbe(html));
+    const fd = openSync(dumpPath, "w");
+    try {
+      runChrome(chrome, ["--dump-dom", pathToFileURL(probePath).href], fd, "measure the layout");
+    } finally {
+      closeSync(fd);
+    }
     const problems = layoutProblems(parseLayoutProbe(readFileSync(dumpPath, "utf8")));
     if (problems.length > 0) {
       throw new BuildError(`The copy does not fit the page:\n  - ${problems.join("\n  - ")}`);
@@ -191,7 +191,7 @@ function build(period: string, sample: boolean): void {
   if (month.tracked && !existsSync(healthPath)) {
     throw new BuildError(`No site health readings for ${period}. Run: npm run report:health -- ${period}`);
   }
-  const health = existsSync(healthPath) ? parseHealth(readJson(healthPath), `${dirName}/${period}.health.json`) : null;
+  const health = existsSync(healthPath) ? parseHealth(readJson(healthPath), period, `${dirName}/${period}.health.json`) : null;
 
   const template = readFileSync(join(ROOT, "template.html"), "utf8");
   const html = inlineAssets(renderReport(template, config, month, search, analytics, health), (assetPath) => {

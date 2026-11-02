@@ -8,8 +8,8 @@
  * Signs in as a read-only service account (key in .secrets/, see README.md).
  * Every run checks each page in the live sitemap with URL Inspection. A full
  * run also asks Search Console for the month's impressions and clicks, the
- * previous month's totals, and the top pages and queries by clicks. The month
- * file you write by hand is never touched.
+ * previous month's totals (the same days of it for a part month), and the top
+ * pages and queries by clicks. The month file you write by hand is never touched.
  *
  * The service account key is read by google-client.ts.
  */
@@ -19,8 +19,8 @@ import { fileURLToPath } from "node:url";
 import { parseConfig, parseSearch } from "./report.ts";
 import type { SearchPerformance, SearchReport } from "./report.ts";
 import { SCOPES } from "./google-auth.ts";
-import { accessToken } from "./google-client.ts";
-import { isMonthComplete, monthRange, previousPeriod, yesterday } from "./periods.ts";
+import { accessToken, fetchWithTimeout, readApiJson } from "./google-client.ts";
+import { isMonthComplete, monthRange, previousPeriod, previousSpan, yesterday } from "./periods.ts";
 import {
   FINAL_DATA_LAG_DAYS,
   SearchConsoleError,
@@ -58,7 +58,7 @@ async function query(
   dimension?: Dimension,
   rowLimit?: number,
 ): Promise<unknown> {
-  const response = await fetch(searchAnalyticsEndpoint(property), {
+  const response = await fetchWithTimeout(searchAnalyticsEndpoint(property), {
     method: "POST",
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
     body: JSON.stringify({
@@ -72,22 +72,18 @@ async function query(
 }
 
 async function readJsonResponse(response: Response, what: string): Promise<unknown> {
-  const body = (await response.json()) as { error?: { message?: string } };
   if (response.status === 403) {
     throw new SearchConsoleError(
       `The service account cannot read this property (${what}). In Search Console > Settings > Users and permissions, ` +
         "add the service account's email as a Restricted user.",
     );
   }
-  if (!response.ok) {
-    throw new SearchConsoleError(`Search Console returned ${response.status} for ${what}: ${body.error?.message ?? "no details"}`);
-  }
-  return body;
+  return readApiJson(response, `Search Console (${what})`, (message) => new SearchConsoleError(message));
 }
 
 /** URL Inspection for every page in the live sitemap. */
 async function checkIndexing(token: string, property: string, sitemapUrl: string): Promise<Indexing> {
-  const sitemap = await fetch(sitemapUrl);
+  const sitemap = await fetchWithTimeout(sitemapUrl);
   if (!sitemap.ok) throw new SearchConsoleError(`Could not load the sitemap ${sitemapUrl} (${sitemap.status}).`);
   const origin = new URL(sitemapUrl).origin;
   const paths = sitemapPaths(await sitemap.text(), new URL(sitemapUrl).host);
@@ -96,7 +92,7 @@ async function checkIndexing(token: string, property: string, sitemapUrl: string
   const results: { path: string; response: unknown }[] = [];
   for (const path of paths) {
     // Sequential on purpose: URL Inspection is rate limited per property.
-    const response = await fetch(URL_INSPECTION_ENDPOINT, {
+    const response = await fetchWithTimeout(URL_INSPECTION_ENDPOINT, {
       method: "POST",
       headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
       body: JSON.stringify({ inspectionUrl: path === "/" ? origin : `${origin}${path}`, siteUrl: property }),
@@ -120,12 +116,12 @@ async function fetchPerformance(
         "Try again after that, or run with --partial for the month so far.",
     );
   }
-  // A running month asks up to yesterday; Google only returns days it has finalised.
-  const range = complete ? month : { startDate: month.startDate, endDate: yesterday(new Date()) };
+  // A running month asks up to yesterday, within the month; Google only returns days it has finalised.
+  const lastDay = yesterday(new Date());
+  const range = complete ? month : { startDate: month.startDate, endDate: lastDay < month.endDate ? lastDay : month.endDate };
   if (range.endDate < range.startDate) throw new SearchConsoleError(`${period} has no complete days yet.`);
-  const [current, previous, pages, queries, days, devices] = await Promise.all([
+  const [current, pages, queries, days, devices] = await Promise.all([
     query(token, property, range),
-    query(token, property, monthRange(previousPeriod(period))),
     query(token, property, range, "page", PAGE_ROWS),
     query(token, property, range, "query", QUERY_ROWS),
     query(token, property, range, "date", 40),
@@ -138,8 +134,11 @@ async function fetchPerformance(
         "its history. Run with --indexing-only to record indexing now and mark the search numbers as pending.",
     );
   }
+  const throughDate = complete ? month.endDate : (lastDataDate(days) ?? range.endDate);
+  // Asked only now, so a part month is compared with exactly the days Google returned for it.
+  const previous = await query(token, property, complete ? monthRange(previousPeriod(period)) : previousSpan(period, throughDate));
   return {
-    throughDate: complete ? month.endDate : (lastDataDate(days) ?? range.endDate),
+    throughDate,
     totals,
     previousTotals: totalsFromResponse(previous),
     daily: dailyStatsFromRows(days),

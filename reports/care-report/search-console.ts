@@ -105,7 +105,7 @@ export function totalsFromResponse(response: unknown): Totals | null {
 const byClicksThenImpressions = <T extends { clicks: number; impressions: number }>(name: (item: T) => string) =>
   (a: T, b: T): number => b.clicks - a.clicks || b.impressions - a.impressions || name(a).localeCompare(name(b));
 
-function normalizePath(url: string): string {
+export function normalizePath(url: string): string {
   let path: string;
   try {
     path = new URL(url).pathname;
@@ -184,7 +184,11 @@ export interface Indexing {
   notIndexed: string[];
 }
 
-/** Paths listed in a sitemap for the given host, like ["/", "/about"]. Other hosts are ignored. */
+/**
+ * Paths listed in a sitemap for the given host, like ["/", "/about/"], with any
+ * query string and exactly as listed so requests reach the address itself rather
+ * than a redirect. Other hosts are ignored.
+ */
 export function sitemapPaths(xml: string, host: string): string[] {
   const paths: string[] = [];
   const locations = xml.match(/<loc>\s*([^<\s]+)\s*<\/loc>/g) ?? [];
@@ -197,7 +201,7 @@ export function sitemapPaths(xml: string, host: string): string[] {
       continue;
     }
     if (url.host !== host) continue;
-    const path = url.pathname.length > 1 ? url.pathname.replace(/\/+$/, "") : "/";
+    const path = `${url.pathname}${url.search}`;
     if (!paths.includes(path)) paths.push(path);
   }
   return paths;

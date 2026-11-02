@@ -6,6 +6,7 @@ import {
   certificateDate,
   headerFindings,
   rdapDomain,
+  readPage,
   registrarName,
   summarisePages,
 } from "./health.ts";
@@ -72,6 +73,18 @@ describe("health readings", () => {
     ).toEqual({ checked: 3, ok: 2, averageMs: 283, slowest: { path: "/about", ms: 448 }, failing: [{ path: "/old", status: 404 }] });
   });
 
+  it("records the status of a page that loads", async () => {
+    const reading = await readPage("/about", () => Promise.resolve(200));
+    expect(reading).toMatchObject({ path: "/about", status: 200 });
+    expect(reading.ms).toBeGreaterThanOrEqual(0);
+  });
+
+  it("records status 0 for a timeout, DNS or TLS error, so the page counts as failing", async () => {
+    const reading = await readPage("/work", () => Promise.reject(new TypeError("fetch failed")));
+    expect(reading).toMatchObject({ path: "/work", status: 0 });
+    expect(summarisePages([reading])).toMatchObject({ checked: 1, ok: 0, failing: [{ path: "/work", status: 0 }] });
+  });
+
   it("reads severity counts from pnpm audit output", () => {
     expect(auditCounts({ metadata: { vulnerabilities: { info: 0, low: 1, moderate: 0, high: 0, critical: 0 } } })).toEqual({
       critical: 0,
@@ -103,5 +116,12 @@ describe("attentionFromHealth", () => {
       "1 page is not loading",
       "2 serious security alerts in the code",
     ]);
+  });
+
+  it("says a page gave no response, rather than printing its status of 0", () => {
+    const report = healthy();
+    report.pages.failing = [{ path: "/work", status: 0 }, { path: "/old", status: 404 }];
+    const item = attentionFromHealth(report, now).find((i) => i.title === "2 pages are not loading");
+    expect(item?.detail).toBe("/work (no response), /old (404). We are fixing them.");
   });
 });
