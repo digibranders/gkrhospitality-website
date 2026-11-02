@@ -119,9 +119,8 @@ export function serviceCatalogSchema(
     name: 'Hospitality consulting services',
     url: absoluteUrl('/what-we-do'),
     provider: { '@id': ORGANIZATION_ID },
-    itemListElement: services.map((service, index) => ({
+    itemListElement: services.map((service) => ({
       '@type': 'Offer',
-      position: index + 1,
       itemOffered: {
         '@type': 'Service',
         name: service.title,
@@ -178,7 +177,6 @@ export function imageGallerySchema(
     id: number;
     title: string;
     description: string;
-    link: string;
     images: string[];
   }[],
 ): Record<string, unknown> {
@@ -194,9 +192,8 @@ export function imageGallerySchema(
       '@type': 'ImageObject',
       name: item.title,
       description: item.description,
-      contentUrl: absoluteUrl(item.images[0]),
-      thumbnailUrl: absoluteUrl(item.images[0]),
-      ...(item.link ? { acquireLicensePage: item.link } : {}),
+      contentUrl: encodeURI(absoluteUrl(item.images[0])),
+      thumbnailUrl: encodeURI(absoluteUrl(item.images[0])),
     })),
   };
 }

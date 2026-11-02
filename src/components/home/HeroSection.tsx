@@ -5,26 +5,28 @@ import { motion, MotionValue, useReducedMotion } from 'motion/react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Image, { StaticImageData } from 'next/image';
+import { Pause, Play } from 'lucide-react';
 
 interface HeroSectionProps {
-  images: StaticImageData[];
+  images: { src: StaticImageData; alt: string }[];
   scale: MotionValue<number>;
 }
 
 export default function HeroSection({ images, scale }: HeroSectionProps) {
   const [currentHeroImage, setCurrentHeroImage] = useState(0);
   const [hasAdvanced, setHasAdvanced] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const reduceMotion = useReducedMotion();
 
-  // Hero slideshow: a new image every 5 seconds, unless the visitor asked for reduced motion.
+  // Hero slideshow: a new image every 5 seconds, unless the visitor paused it or asked for reduced motion.
   useEffect(() => {
-    if (reduceMotion) return;
+    if (reduceMotion || isPaused) return;
     const interval = setInterval(() => {
       setCurrentHeroImage((prev) => (prev + 1) % images.length);
       setHasAdvanced(true);
     }, 5000);
     return () => clearInterval(interval);
-  }, [images.length, reduceMotion]);
+  }, [images.length, reduceMotion, isPaused]);
 
   return (
     <section className="relative h-screen w-full overflow-hidden flex flex-col justify-center">
@@ -44,6 +46,7 @@ export default function HeroSection({ images, scale }: HeroSectionProps) {
             return (
               <motion.div
                 key={index}
+                aria-hidden={index !== currentHeroImage}
                 className="absolute inset-0 w-full h-full"
                 // The first slide renders visible in the server HTML, so it can paint as the
                 // largest contentful element without waiting for JavaScript.
@@ -52,8 +55,8 @@ export default function HeroSection({ images, scale }: HeroSectionProps) {
                 transition={{ duration: 1.5 }}
               >
                 <Image
-                  src={image}
-                  alt={index === 0 ? "Luxury hotel lobby interior with elegant lighting" : index === 1 ? "Fine dining restaurant table setting" : "Hospitality property exterior view"}
+                  src={image.src}
+                  alt={image.alt}
                   fill
                   className="object-cover"
                   priority={index === 0}
@@ -80,6 +83,16 @@ export default function HeroSection({ images, scale }: HeroSectionProps) {
           </Button>
         </motion.div>
       </div>
+
+      {/* Hidden under reduced motion, where the slideshow never moves. */}
+      <button
+        type="button"
+        onClick={() => setIsPaused((prev) => !prev)}
+        aria-label={isPaused ? 'Play slideshow' : 'Pause slideshow'}
+        className="absolute bottom-6 right-6 md:bottom-10 md:right-12 z-20 w-10 h-10 rounded-full border border-white/30 bg-[#181818]/60 text-white flex items-center justify-center cursor-pointer transition-colors duration-300 hover:bg-[#c5a059] hover:border-[#c5a059] hover:text-[#181818] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c5a059] focus-visible:ring-offset-2 focus-visible:ring-offset-[#181818] motion-reduce:hidden"
+      >
+        {isPaused ? <Play className="w-4 h-4" aria-hidden="true" /> : <Pause className="w-4 h-4" aria-hidden="true" />}
+      </button>
     </section>
   );
 }

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Navbar from './Navbar';
 import { describe, it, expect, vi } from 'vitest';
 import type { ImgHTMLAttributes, ComponentPropsWithoutRef } from 'react';
@@ -33,6 +33,33 @@ describe('Navbar Component', () => {
     // but we can check if the button wrapping it exists or the icon is in the DOM)
     const menuIcon = screen.getByTestId('menu-icon');
     expect(menuIcon).toBeInTheDocument();
+  });
+
+  it('moves focus into the open mobile menu, closes on Escape and returns focus', async () => {
+    render(<Navbar />);
+    const menuButton = screen.getByRole('button', { name: 'Open main menu' });
+    expect(menuButton).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(menuButton);
+    const dialog = await screen.findByRole('dialog', { name: 'Main menu' });
+    expect(menuButton).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: 'Close menu' })).toHaveFocus();
+    expect(document.body.style.overflow).toBe('hidden');
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(dialog).not.toBeInTheDocument());
+    expect(menuButton).toHaveFocus();
+    expect(document.body.style.overflow).toBe('');
+  });
+
+  it('keeps Tab inside the open mobile menu', async () => {
+    render(<Navbar />);
+    fireEvent.click(screen.getByRole('button', { name: 'Open main menu' }));
+    const close = await screen.findByRole('button', { name: 'Close menu' });
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    const dialog = screen.getByRole('dialog', { name: 'Main menu' });
+    expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    expect(document.activeElement).not.toBe(close);
   });
 
   it('opens mobile menu when menu button is clicked', async () => {

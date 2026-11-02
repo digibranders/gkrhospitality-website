@@ -69,6 +69,22 @@ describe('validateContactSubmission', () => {
     expect(validateContactSubmission({ ...valid, name: "José O'Neil-Smith Jr." }).ok).toBe(true);
   });
 
+  it('rejects bare domains in the name, which the auto-reply would repeat', () => {
+    for (const name of ['bit.ly/x', 'BIT.LY', 'spam.example/win', 'visit spam.com now', 'someone@spam.co.uk']) {
+      expect(errorOf({ ...valid, name })).toBe('name');
+    }
+  });
+
+  it('does not mistake real names for domains', () => {
+    for (const name of ['St. John', "O'Brien", 'Mary-Jane', 'J. Smith', 'J.Smith', 'St.John', 'Dr. Who Jr.']) {
+      expect(validateContactSubmission({ ...valid, name }).ok).toBe(true);
+    }
+  });
+
+  it('still allows a domain in the company name', () => {
+    expect(validateContactSubmission({ ...valid, company: 'Booking.com' }).ok).toBe(true);
+  });
+
   it('allows line breaks in the message', () => {
     expect(validateContactSubmission({ ...valid, message: 'Line one.\nLine two.' }).ok).toBe(true);
   });

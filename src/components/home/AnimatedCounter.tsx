@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useInView } from 'motion/react';
+import { useInView, useReducedMotion } from 'motion/react';
 
 interface AnimatedCounterProps {
   end: number;
@@ -10,12 +10,14 @@ interface AnimatedCounterProps {
 }
 
 export function AnimatedCounter({ end, duration = 2, suffix = "" }: AnimatedCounterProps) {
-  const [count, setCount] = useState(0);
+  // Null until the count starts, so the served HTML holds the real value exactly once.
+  const [count, setCount] = useState<number | null>(null);
   const ref = useRef<HTMLSpanElement>(null);
   const isInView = useInView(ref, { once: true });
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
-    if (!isInView) return;
+    if (!isInView || reduceMotion) return;
 
     let startTime: number;
     let animationFrame: number;
@@ -33,7 +35,18 @@ export function AnimatedCounter({ end, duration = 2, suffix = "" }: AnimatedCoun
 
     animationFrame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrame);
-  }, [isInView, end, duration]);
+  }, [isInView, reduceMotion, end, duration]);
 
-  return <span ref={ref}>{count}{suffix}</span>;
+  return (
+    <span ref={ref}>
+      {count === null ? (
+        `${end}${suffix}`
+      ) : (
+        <>
+          <span className="sr-only">{end}{suffix}</span>
+          <span aria-hidden="true">{count}{suffix}</span>
+        </>
+      )}
+    </span>
+  );
 }

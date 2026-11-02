@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown, AlertCircle, Check } from 'lucide-react';
 import { sendContactEmail } from '@/app/actions/send-email';
+import { trackContactSubmitted } from '@/lib/analytics';
 import { toast } from 'sonner';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { FAQ_DATA, type FAQItem } from '@/data/faqData';
@@ -68,6 +69,7 @@ export default function Contact() {
       try {
         const result = await sendContactEmail({ ...formData, turnstileToken });
         if (result.success) {
+          trackContactSubmitted();
           setIsSuccess(true);
           toast.success('Thank you for reaching out! We will get back to you soon.');
           setFormData({
@@ -127,7 +129,7 @@ export default function Contact() {
               transition={{ duration: 1 }}
               className="text-center mb-16"
             >
-              <span className="text-[#8a6d3b] text-[0.875rem] font-bold tracking-[0.4em] uppercase block mb-6">Start a Conversation</span>
+              <span className="text-[#c5a059] text-[0.875rem] font-bold tracking-[0.4em] uppercase block mb-6">Start a Conversation</span>
               <h1 className="text-4xl md:text-7xl font-serif font-light text-white leading-tight tracking-tight mb-6">
                 Let&apos;s Talk
               </h1>
@@ -174,7 +176,7 @@ export default function Contact() {
                     onChange={handleChange}
                     aria-invalid={!!errors.name}
                     aria-describedby={errors.name ? 'name-error' : undefined}
-                    className={`w-full bg-transparent border-b ${errors.name ? 'border-[#C62828]' : 'border-[#181818]/20'} focus:border-[#c5a059] text-[#181818] py-4 transition-colors outline-none placeholder:text-stone-400`}
+                    className={`w-full bg-transparent border-b ${errors.name ? 'border-[#C62828]' : 'border-[#181818]/50'} focus:border-[#8a6d3b] focus:shadow-[0_1px_0_0_#8a6d3b] text-[#181818] py-4 transition-colors outline-none placeholder:text-stone-500`}
                     placeholder="Your full name"
                   />
                   {errors.name && (
@@ -198,7 +200,7 @@ export default function Contact() {
                     onChange={handleChange}
                     aria-invalid={!!errors.email}
                     aria-describedby={errors.email ? 'email-error' : undefined}
-                    className={`w-full bg-transparent border-b ${errors.email ? 'border-[#C62828]' : 'border-[#181818]/20'} focus:border-[#c5a059] text-[#181818] py-4 transition-colors outline-none placeholder:text-stone-400`}
+                    className={`w-full bg-transparent border-b ${errors.email ? 'border-[#C62828]' : 'border-[#181818]/50'} focus:border-[#8a6d3b] focus:shadow-[0_1px_0_0_#8a6d3b] text-[#181818] py-4 transition-colors outline-none placeholder:text-stone-500`}
                     placeholder="your@email.com"
                   />
                   {errors.email && (
@@ -220,7 +222,7 @@ export default function Contact() {
                     maxLength={CONTACT_LIMITS.phone}
                     value={formData.phone}
                     onChange={handleChange}
-                    className="w-full bg-transparent border-b border-[#181818]/20 focus:border-[#c5a059] text-[#181818] py-4 transition-colors outline-none placeholder:text-stone-400"
+                    className="w-full bg-transparent border-b border-[#181818]/50 focus:border-[#8a6d3b] focus:shadow-[0_1px_0_0_#8a6d3b] text-[#181818] py-4 transition-colors outline-none placeholder:text-stone-500"
                     placeholder="+1 (555) 000-0000"
                   />
                 </div>
@@ -237,7 +239,7 @@ export default function Contact() {
                     maxLength={CONTACT_LIMITS.company}
                     value={formData.company}
                     onChange={handleChange}
-                    className="w-full bg-transparent border-b border-[#181818]/20 focus:border-[#c5a059] text-[#181818] py-4 transition-colors outline-none placeholder:text-stone-400"
+                    className="w-full bg-transparent border-b border-[#181818]/50 focus:border-[#8a6d3b] focus:shadow-[0_1px_0_0_#8a6d3b] text-[#181818] py-4 transition-colors outline-none placeholder:text-stone-500"
                     placeholder="Your organization"
                   />
                 </div>
@@ -255,14 +257,14 @@ export default function Contact() {
                       onChange={handleChange}
                       aria-invalid={!!errors.role}
                       aria-describedby={errors.role ? 'role-error' : undefined}
-                      className={`w-full bg-transparent border-b ${errors.role ? 'border-[#C62828]' : 'border-[#181818]/20'} focus:border-[#c5a059] text-[#181818] py-4 appearance-none outline-none cursor-pointer`}
+                      className={`w-full bg-transparent border-b ${errors.role ? 'border-[#C62828]' : 'border-[#181818]/50'} focus:border-[#8a6d3b] focus:shadow-[0_1px_0_0_#8a6d3b] text-[#181818] py-4 appearance-none outline-none cursor-pointer`}
                     >
                       <option value="" disabled>Select Role</option>
                       {ROLE_OPTIONS.map((role) => (
                         <option key={role} value={role}>{role}</option>
                       ))}
                     </select>
-                    <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none" />
+                    <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500 pointer-events-none" />
                   </div>
                   {errors.role && (
                     <p id="role-error" className="text-[#C62828] text-xs mt-2 flex items-center gap-1">
@@ -290,7 +292,7 @@ export default function Contact() {
                       onChange={handleChange}
                       aria-invalid={!!errors.roleDescription}
                       aria-describedby={errors.roleDescription ? 'roleDescription-error' : undefined}
-                      className={`w-full bg-transparent border-b ${errors.roleDescription ? 'border-[#C62828]' : 'border-[#181818]/20'} focus:border-[#c5a059] text-[#181818] py-4 transition-colors outline-none placeholder:text-stone-400`}
+                      className={`w-full bg-transparent border-b ${errors.roleDescription ? 'border-[#C62828]' : 'border-[#181818]/50'} focus:border-[#8a6d3b] focus:shadow-[0_1px_0_0_#8a6d3b] text-[#181818] py-4 transition-colors outline-none placeholder:text-stone-500`}
                       placeholder="Tell us about your role"
                     />
                     {errors.roleDescription && (
@@ -314,14 +316,14 @@ export default function Contact() {
                       onChange={handleChange}
                       aria-invalid={!!errors.projectType}
                       aria-describedby={errors.projectType ? 'projectType-error' : undefined}
-                      className={`w-full bg-transparent border-b ${errors.projectType ? 'border-[#C62828]' : 'border-[#181818]/20'} focus:border-[#c5a059] text-[#181818] py-4 appearance-none outline-none cursor-pointer`}
+                      className={`w-full bg-transparent border-b ${errors.projectType ? 'border-[#C62828]' : 'border-[#181818]/50'} focus:border-[#8a6d3b] focus:shadow-[0_1px_0_0_#8a6d3b] text-[#181818] py-4 appearance-none outline-none cursor-pointer`}
                     >
                       <option value="" disabled>Select Type</option>
                       {PROJECT_TYPES.map((type) => (
                         <option key={type} value={type}>{type}</option>
                       ))}
                     </select>
-                    <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none" />
+                    <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500 pointer-events-none" />
                   </div>
                   {errors.projectType && (
                     <p id="projectType-error" className="text-[#C62828] text-xs mt-2 flex items-center gap-1">
@@ -344,7 +346,7 @@ export default function Contact() {
                     aria-invalid={!!errors.message}
                     aria-describedby={errors.message ? 'message-error' : undefined}
                     rows={4}
-                    className={`w-full bg-transparent border-b ${errors.message ? 'border-[#C62828]' : 'border-[#181818]/20'} focus:border-[#c5a059] text-[#181818] py-4 transition-colors outline-none resize-none placeholder:text-stone-400`}
+                    className={`w-full bg-transparent border-b ${errors.message ? 'border-[#C62828]' : 'border-[#181818]/50'} focus:border-[#8a6d3b] focus:shadow-[0_1px_0_0_#8a6d3b] text-[#181818] py-4 transition-colors outline-none resize-none placeholder:text-stone-500`}
                     placeholder="What challenges are you facing? What stage is your project at?"
                   />
                   {errors.message && (
@@ -359,7 +361,10 @@ export default function Contact() {
                   <Turnstile
                     ref={turnstileRef}
                     siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
-                    onSuccess={(token) => setTurnstileToken(token)}
+                    onSuccess={(token) => {
+                      setTurnstileToken(token);
+                      setErrors((prev) => ({ ...prev, turnstileToken: '' }));
+                    }}
                     onExpire={() => setTurnstileToken('')}
                     onError={() => setTurnstileToken('')}
                     options={{
@@ -378,10 +383,10 @@ export default function Contact() {
                   type="submit"
                   disabled={isSubmitting || isSuccess}
                   className={`cursor-pointer w-full flex items-center justify-center gap-3 py-6 text-xs uppercase tracking-[0.3em] font-bold transition-all duration-500 rounded-full ${isSuccess
-                    ? 'bg-green-600 text-white'
+                    ? 'bg-green-700 text-white'
                     : isSubmitting
-                      ? 'bg-[#8a6d3b] opacity-50 cursor-not-allowed text-[#181818]'
-                      : 'bg-[#8a6d3b] text-[#181818] hover:bg-[#181818] hover:text-white'
+                      ? 'bg-[#c5a059] opacity-50 cursor-not-allowed text-[#181818]'
+                      : 'bg-[#c5a059] text-[#181818] hover:bg-[#181818] hover:text-white'
                     }`}
                 >
                   <AnimatePresence mode="wait">
@@ -440,22 +445,25 @@ export default function Contact() {
                 transition={{ duration: 0.4, delay: index * 0.05 }}
                 className="border-b border-[#181818]/10 last:border-0"
               >
-                <button
-                  onClick={() => setOpenFAQ(openFAQ === index ? null : index)}
-                  className="cursor-pointer w-full py-8 flex items-start justify-between gap-8 text-left group hover:bg-[#181818]/5 px-6 -mx-6 transition-colors duration-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#c5a059] rounded-md"
-                  aria-expanded={openFAQ === index}
-                  aria-controls={`faq-answer-${index}`}
-                >
-                  <div className="flex items-start gap-6 flex-1">
-                    <span className="text-[#8a6d3b] text-sm font-serif mt-1 flex-shrink-0">0{index + 1}</span>
-                    <h3 className="text-[#181818] text-xl md:text-2xl font-serif group-hover:text-[#8a6d3b] transition-colors">
-                      {faq.question}
-                    </h3>
-                  </div>
-                  <ChevronDown
-                    className={`w-5 h-5 text-[#8a6d3b] flex-shrink-0 mt-2 transition-transform duration-300 ${openFAQ === index ? 'rotate-180' : ''}`}
-                  />
-                </button>
+                <h3>
+                  <button
+                    id={`faq-question-${index}`}
+                    onClick={() => setOpenFAQ(openFAQ === index ? null : index)}
+                    className="cursor-pointer w-full py-8 flex items-start justify-between gap-8 text-left group hover:bg-[#181818]/5 px-6 -mx-6 transition-colors duration-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#8a6d3b] rounded-md"
+                    aria-expanded={openFAQ === index}
+                    aria-controls={`faq-answer-${index}`}
+                  >
+                    <span className="flex items-start gap-6 flex-1">
+                      <span className="text-[#8a6d3b] text-sm font-serif mt-1 flex-shrink-0">0{index + 1}</span>
+                      <span className="text-[#181818] text-xl md:text-2xl font-serif group-hover:text-[#8a6d3b] transition-colors">
+                        {faq.question}
+                      </span>
+                    </span>
+                    <ChevronDown
+                      className={`w-5 h-5 text-[#8a6d3b] flex-shrink-0 mt-2 transition-transform duration-300 motion-reduce:transition-none ${openFAQ === index ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                </h3>
 
                 <motion.div
                   initial={false}
@@ -467,6 +475,7 @@ export default function Contact() {
                   className="overflow-hidden"
                   id={`faq-answer-${index}`}
                   role="region"
+                  aria-labelledby={`faq-question-${index}`}
                 >
                   <div className="pb-8 pl-6 pr-6">
                     <div className="pl-12">

@@ -10,6 +10,8 @@ vi.mock('lucide-react', () => ({
   ChevronDown: () => <div data-testid="chevron-down-icon" />,
   Check: () => <div data-testid="check-icon" />,
   ArrowUpRight: () => <div data-testid="arrow-up-right-icon" />,
+  Pause: () => <div data-testid="pause-icon" />,
+  Play: () => <div data-testid="play-icon" />,
 }));
 
 // Mock Next.js Image

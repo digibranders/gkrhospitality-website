@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Masonry, { ResponsiveMasonry } from 'react-responsive-masonry';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
@@ -14,6 +14,7 @@ export default function GalleryPage() {
   const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
   const mounted = useHasMounted();
+  const lightboxOpenerRef = useRef<HTMLButtonElement | null>(null);
 
   const selectedItem = selectedItemIndex !== null ? GALLERY_ITEMS[selectedItemIndex] : null;
 
@@ -88,7 +89,10 @@ export default function GalleryPage() {
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                   viewport={{ once: true }}
                   className="relative group cursor-pointer overflow-hidden w-full block text-left bg-transparent border-0 p-0 m-0 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#c5a059] focus-visible:ring-offset-2 focus-visible:ring-offset-[#181818]"
-                  onClick={() => setSelectedItemIndex(index)}
+                  onClick={(e) => {
+                    lightboxOpenerRef.current = e.currentTarget;
+                    setSelectedItemIndex(index);
+                  }}
                   aria-label={`View project: ${item.title}`}
                 >
                   <Image
@@ -114,7 +118,13 @@ export default function GalleryPage() {
         <DialogPrimitive.Root open={selectedItemIndex !== null} onOpenChange={(open) => !open && setSelectedItemIndex(null)}>
           <DialogPrimitive.Portal>
             <DialogPrimitive.Overlay className="fixed inset-0 z-[150] bg-black/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-            <DialogPrimitive.Content className="fixed inset-0 z-[150] w-screen h-screen bg-[#181818] p-0 shadow-none duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 overflow-y-auto md:overflow-hidden md:grid md:grid-cols-2 gap-0">
+            <DialogPrimitive.Content
+              onCloseAutoFocus={(e) => {
+                e.preventDefault();
+                lightboxOpenerRef.current?.focus();
+              }}
+              className="fixed inset-0 z-[150] w-screen h-screen bg-[#181818] p-0 shadow-none duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 overflow-y-auto md:overflow-hidden md:grid md:grid-cols-2 gap-0"
+            >
               <DialogPrimitive.Title className="sr-only">
                 {selectedItem?.title}
               </DialogPrimitive.Title>
@@ -123,7 +133,7 @@ export default function GalleryPage() {
               </DialogPrimitive.Description>
 
               {/* Close Button */}
-              <DialogPrimitive.Close className="cursor-pointer absolute right-6 top-6 z-50 ring-offset-background transition-all hover:scale-110 focus:outline-none disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground p-2 bg-black/20 hover:bg-black/40 text-white rounded-full">
+              <DialogPrimitive.Close className="cursor-pointer absolute right-6 top-6 z-50 transition-all hover:scale-110 motion-reduce:hover:scale-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c5a059] focus-visible:ring-offset-2 focus-visible:ring-offset-[#181818] disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground p-2 bg-black/20 hover:bg-black/40 text-white rounded-full">
                 <X className="h-6 w-6" />
                 <span className="sr-only">Close</span>
               </DialogPrimitive.Close>
@@ -223,7 +233,7 @@ export default function GalleryPage() {
                     >
                       <ChevronLeft size={16} /> Previous
                     </Button>
-                    <span className="text-xs text-stone-500 self-center tracking-widest">
+                    <span className="text-xs text-stone-400 self-center tracking-widest">
                       {currentImageIndex + 1} / {selectedItem.images.length}
                     </span>
                     <Button

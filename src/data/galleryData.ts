@@ -13,7 +13,7 @@ export const GALLERY_ITEMS: GalleryItem[] = [
   {
     "id": 1,
     "title": "BLACE",
-    "description": "Gallery for Blace",
+    "description": "Tech-enabled meeting, event and venue marketplace in New York and Los Angeles.",
     "link": "https://www.blace.com/",
     "images": [
       "/images/gallery/BLACE Entertainment/Blace 1.jpg",
@@ -26,7 +26,7 @@ export const GALLERY_ITEMS: GalleryItem[] = [
   {
     "id": 2,
     "title": "BXP",
-    "description": "Gallery for Bxp ",
+    "description": "Residential and commercial real estate amenities.",
     "link": "https://www.bxp.com/",
     "images": [
       "/images/gallery/BXP Residential and CRE Amenities/BXP 1.jpg",
@@ -39,7 +39,7 @@ export const GALLERY_ITEMS: GalleryItem[] = [
   {
     "id": 3,
     "title": "THE BEVERLY HILTON",
-    "description": "Gallery for The Beverly Hilton",
+    "description": "Food and beverage leadership at The Beverly Hilton.",
     "link": "https://www.hilton.com/en/hotels/laxbhhh-the-beverly-hilton/events/",
     "images": [
       "/images/gallery/Beverly Hilton/Beverly_1.jpg",
@@ -52,7 +52,7 @@ export const GALLERY_ITEMS: GalleryItem[] = [
   {
     "id": 4,
     "title": "ZUMA NEW YORK",
-    "description": "Gallery for Zuma New York",
+    "description": "The Zuma flagship in New York, part of a multi-city U.S. expansion.",
     "link": "https://www.zumarestaurant.com/",
     "images": [
       "/images/gallery/Zuma New York Restaurants/zuma_1.jpg",
@@ -65,7 +65,7 @@ export const GALLERY_ITEMS: GalleryItem[] = [
   {
     "id": 5,
     "title": "EQUINOX HOTELS",
-    "description": "Gallery for Equinox Hotels",
+    "description": "Food, beverage and events for the opening of the first Equinox Hotel, at Hudson Yards.",
     "link": "https://www.equinox-hotels.com/",
     "images": [
       "/images/gallery/EQUINOX HOTELS/EQUINOX HOTELS 2.jpg",
@@ -78,7 +78,7 @@ export const GALLERY_ITEMS: GalleryItem[] = [
   {
     "id": 6,
     "title": "ADARE",
-    "description": "Gallery for Adare",
+    "description": "Senior leadership at Adare Manor.",
     "link": "https://www.adaremanor.com/",
     "images": [
       "/images/gallery/adare-hotels/adare_1.jpg",
@@ -102,7 +102,7 @@ export const GALLERY_ITEMS: GalleryItem[] = [
   {
     "id": 8,
     "title": "CONVENE | etc.venues",
-    "description": "Gallery for CONVENE | etc.venues",
+    "description": "Launched etc.venues in the US, opened three New York venues and led the merger with Convene.",
     "link": "https://convene.com/about-us/etc-venues/",
     "images": [
       "/images/gallery/etc.venues meetings and events/etc_1.jpg",
@@ -115,7 +115,7 @@ export const GALLERY_ITEMS: GalleryItem[] = [
   {
     "id": 9,
     "title": "MONTAUK DISTILLING CO",
-    "description": "Gallery for Montauk Distilling Co",
+    "description": "Restaurant and bar project for Montauk Distilling Co.",
     "link": "https://www.montaukdistillingco.com/",
     "images": [
       "/images/gallery/Montauk Distilling Co Restaurants and Bar/Montauk Distilling Co. 1.jpg",
@@ -128,7 +128,7 @@ export const GALLERY_ITEMS: GalleryItem[] = [
   {
     "id": 10,
     "title": "PRINCIPAL HOTELS",
-    "description": "Gallery for Principal Hotels",
+    "description": "Senior leadership at Principal Hotels in the UK.",
     "link": "#",
     "images": [
       "/images/gallery/Principal Hotels/Principal Hotels_2.png",
@@ -141,7 +141,7 @@ export const GALLERY_ITEMS: GalleryItem[] = [
   {
     "id": 11,
     "title": "RUDIN GROUP",
-    "description": "Gallery for Rudin Group",
+    "description": "Residential and commercial real estate amenities for Rudin Group.",
     "link": "https://www.rudin.com/",
     "images": [
       "/images/gallery/Rudin Group Residential and CRE Amenities/Rudin_2.jpg",
@@ -154,7 +154,7 @@ export const GALLERY_ITEMS: GalleryItem[] = [
   {
     "id": 12,
     "title": "STARR RESTAURANTS",
-    "description": "Gallery for Starr Restaurants",
+    "description": "Hotel operations and development with Starr Restaurants.",
     "link": "https://www.starr-restaurants.com/",
     "images": [
       "/images/gallery/STARR Restaurants/Starr_1.jpg",
@@ -167,7 +167,7 @@ export const GALLERY_ITEMS: GalleryItem[] = [
   {
     "id": 13,
     "title": "SAGE HOSPITALITY",
-    "description": "Gallery for Sage Hospitality",
+    "description": "Residential and commercial real estate amenities for Sage Hospitality.",
     "link": "https://sagerealty.com/",
     "images": [
       "/images/gallery/Sage Hospitality Residential and CRE Amenities/sage_1.jpg",
@@ -180,7 +180,7 @@ export const GALLERY_ITEMS: GalleryItem[] = [
   {
     "id": 14,
     "title": "WALDORF ASTORIA NEW YORK",
-    "description": "Gallery for Waldorf Astoria New York",
+    "description": "Senior hotel leadership at the Waldorf Astoria New York.",
     "link": "https://www.waldorfastorianewyork.com/",
     "images": [
       "/images/gallery/Waldorf Astoria New York Hotels/Waldorf Astoria New York 2.jpg",
@@ -193,7 +193,7 @@ export const GALLERY_ITEMS: GalleryItem[] = [
   {
     "id": 15,
     "title": "BOSTON HARBOR",
-    "description": "Gallery for Boston Harbor",
+    "description": "Senior leadership at the Boston Harbor Hotel.",
     "link": "https://www.bostonharborhotel.com/",
     "images": [
       "/images/gallery/Boston Harbor Hotel/Boston Harbor 2.png",
@@ -206,7 +206,7 @@ export const GALLERY_ITEMS: GalleryItem[] = [
   {
     "id": 16,
     "title": "FAIRFIELD BEACH CLUB",
-    "description": "Gallery for Fairfield Beach Club",
+    "description": "Private, member-only club.",
     "link": "https://www.fbc.club/",
     "images": [
       "/images/gallery/FBC Private and Member-only/SaveClip.App_455806974_737759325100612_7556852630658393511_n.jpg",
@@ -230,7 +230,7 @@ export const GALLERY_ITEMS: GalleryItem[] = [
   {
     "id": 18,
     "title": "BAKAN",
-    "description": "Gallery for Bakan",
+    "description": "Restaurant project for Bakan.",
     "link": "https://www.bakanwynwood.com/",
     "images": [
       "/images/gallery/bakan-restaurant/BAKAN 1.webp",
@@ -254,7 +254,7 @@ export const GALLERY_ITEMS: GalleryItem[] = [
   {
     "id": 20,
     "title": "MEET RESIDENT",
-    "description": "Gallery for Meet Resident",
+    "description": "Private, members-only project for Meet Resident.",
     "link": "https://www.meetresident.com/",
     "images": [
       "/images/gallery/Meet Resident Private and Members Only/Resident .jpg",
@@ -267,7 +267,7 @@ export const GALLERY_ITEMS: GalleryItem[] = [
   {
     "id": 21,
     "title": "Caribbean- St Vincent and the Grenadines",
-    "description": "Gallery for Caribbean- St Vincent and the Grenadines",
+    "description": "Hospitality project in St Vincent and the Grenadines.",
     "link": "#",
     "images": [
       "/images/gallery/Caribbean St Vincent and the Grenadines/Caribbean_1.jpg",

@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import Image, { StaticImageData } from 'next/image';
+import { Pause, Play } from 'lucide-react';
 
 // Employed By Logos
 import beverlyHiltonLogo from '@/assets/images/logos/beverly-hilton.png';
@@ -58,64 +59,96 @@ const EMPLOYED_BY_COMPANIES: Company[] = [
   { name: 'Adare Manor', logo: adareManorLogo },
   { name: 'Swallow Hotels', logo: swallowHotelsLogo },
   { name: 'Principal Hotels', logo: principalHotelsLogo },
-  { name: 'Waldorf Astoria', logo: waldorfLogo, dimensions: 'h-12 w-[150px] md:h-16 w-[200px]' }, // Updated logo
-  { name: 'Boston Harbor Hotel', logo: bostonHarborHotelLogo, dimensions: 'h-10 w-[120px] md:h-14 w-[160px]' },
+  { name: 'Waldorf Astoria', logo: waldorfLogo, dimensions: 'h-12 w-[150px] md:h-16 md:w-[200px]' }, // Updated logo
+  { name: 'Boston Harbor Hotel', logo: bostonHarborHotelLogo, dimensions: 'h-10 w-[120px] md:h-14 md:w-[160px]' },
   { name: 'The Beverly Hilton', logo: beverlyHiltonLogo },
   { name: 'Hilton Hotels', logo: hiltonHotelsLogo }, // New
-  // { name: 'ROKA', logo: rokaLogo, dimensions: 'h-6 w-[70px] md:h-8 w-[100px]' },
-  { name: 'Azumi', logo: azumiLogo, dimensions: 'h-6 w-[70px] md:h-8 w-[100px]' },
-  { name: 'ETARU', logo: etaruLogo, dimensions: 'h-6 w-[70px] md:h-8 w-[100px]' },
-  { name: 'INKO NITO', logo: inkoNitoLogo, dimensions: 'h-6 w-[70px] md:h-8 w-[100px]', className: 'grayscale-0 brightness-100' }, // Always light/visible
+  // { name: 'ROKA', logo: rokaLogo, dimensions: 'h-6 w-[70px] md:h-8 md:w-[100px]' },
+  { name: 'Azumi', logo: azumiLogo, dimensions: 'h-6 w-[70px] md:h-8 md:w-[100px]' },
+  { name: 'ETARU', logo: etaruLogo, dimensions: 'h-6 w-[70px] md:h-8 md:w-[100px]' },
+  { name: 'INKO NITO', logo: inkoNitoLogo, dimensions: 'h-6 w-[70px] md:h-8 md:w-[100px]', className: 'grayscale-0 brightness-100' }, // Always light/visible
   { name: 'Starr Restaurants', logo: starrRestaurantsLogo },
-  { name: 'etc.venues', logo: etcVenuesLogo, dimensions: 'h-6 w-[120px] md:h-12 w-[180px]' }, // Manually sized for balance
+  { name: 'etc.venues', logo: etcVenuesLogo, dimensions: 'h-6 w-[120px] md:h-12 md:w-[180px]' }, // Manually sized for balance
 ];
 
 const CONSULTED_WITH_COMPANIES: Company[] = [
-  { name: 'BXP', logo: bxpLogo, dimensions: 'h-8 w-[90px] md:h-12 w-[120px]' },
-  { name: 'Rudin Group', logo: rudinLogo, dimensions: 'h-4 w-[70px] md:h-6 w-[90px]' },
-  { name: 'Zuma', logo: zumaConsultedLogo, dimensions: 'h-4 w-[70px] md:h-6 w-[90px]' },
+  { name: 'BXP', logo: bxpLogo, dimensions: 'h-8 w-[90px] md:h-12 md:w-[120px]' },
+  { name: 'Rudin Group', logo: rudinLogo, dimensions: 'h-4 w-[70px] md:h-6 md:w-[90px]' },
+  { name: 'Zuma', logo: zumaConsultedLogo, dimensions: 'h-4 w-[70px] md:h-6 md:w-[90px]' },
   { name: 'Equinox Hotels', logo: equinoxHotelsLogo },
   { name: 'R', logo: rLogo, hoverLogo: rLogo, className: 'grayscale-0 brightness-100' },
-  { name: 'Convene', logo: conveneLogo, dimensions: 'h-6 w-[140px] md:h-15 w-[310px]' },
-  { name: 'Affect Group', logo: affectLogo, dimensions: 'h-5 w-[65px] md:h-7 w-[90px]' },
-  { name: 'Sage Hospitality', logo: sageLogo, dimensions: 'h-6 w-[80px] md:h-8 w-[110px]' },
-  { name: 'Bakan', logo: bakanLogo, dimensions: 'h-7 w-[90px] md:h-10 w-[120px]' },
-  { name: 'Support 305', logo: support305Logo, dimensions: 'h-8 w-[100px] md:h-11 w-[140px]' },
+  { name: 'Convene', logo: conveneLogo, dimensions: 'h-6 w-[140px] md:h-15 md:w-[310px]' },
+  { name: 'Affect Group', logo: affectLogo, dimensions: 'h-5 w-[65px] md:h-7 md:w-[90px]' },
+  { name: 'Sage Hospitality', logo: sageLogo, dimensions: 'h-6 w-[80px] md:h-8 md:w-[110px]' },
+  { name: 'Bakan', logo: bakanLogo, dimensions: 'h-7 w-[90px] md:h-10 md:w-[120px]' },
+  { name: 'Support 305', logo: support305Logo, dimensions: 'h-8 w-[100px] md:h-11 md:w-[140px]' },
   { name: 'Fairfield', logo: fairfieldLogo },
   { name: 'Montauk', logo: montaukLogo },
-  { name: 'Blace', logo: blaceLogo, dimensions: 'h-6 w-[100px] md:h-8 w-[120px]' },
+  { name: 'Blace', logo: blaceLogo, dimensions: 'h-6 w-[100px] md:h-8 md:w-[120px]' },
   { name: 'Buccament', logo: buccamentTransperentLogo, hoverLogo: buccamentLogo, className: 'grayscale-0 brightness-100' },
   { name: 'Nyc Hospitality', logo: nycHospitalityLogo, hoverLogo: nycHospitalityLogo, className: 'grayscale-0 brightness-100' },
 ];
 
-export default function LogosSection() {
+interface LogoMarqueeProps {
+  companies: Company[];
+  /** Gap and animation classes for this row. */
+  trackClassName: string;
+  isPaused: boolean;
+}
+
+function LogoMarquee({ companies, trackClassName, isPaused }: LogoMarqueeProps) {
   // Using 3 sets ensuring enough buffer for smooth infinite loop on all screen sizes
-  const employedMarquee = [...EMPLOYED_BY_COMPANIES, ...EMPLOYED_BY_COMPANIES, ...EMPLOYED_BY_COMPANIES];
-  const consultedMarquee = [...CONSULTED_WITH_COMPANIES, ...CONSULTED_WITH_COMPANIES, ...CONSULTED_WITH_COMPANIES];
+  const marquee = [...companies, ...companies, ...companies];
 
-  // Default to desktop speeds (40s and 30s)
-  const [employedDuration, setEmployedDuration] = React.useState(40);
-  const [consultedDuration, setConsultedDuration] = React.useState(40);
+  return (
+    <div className="relative overflow-hidden w-full mt-2">
+      {/* Gradient overlays for fade effect - visible on all devices */}
+      <div className="absolute left-0 top-0 bottom-0 w-12 md:w-32 bg-gradient-to-r from-[#FFF7F2] to-transparent z-10 motion-reduce:hidden"></div>
+      <div className="absolute right-0 top-0 bottom-0 w-12 md:w-32 bg-gradient-to-l from-[#FFF7F2] to-transparent z-10 motion-reduce:hidden"></div>
 
-  React.useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 768) {
-        // Mobile: Slower speed (25s as requested)
-        setEmployedDuration(25);
-        setConsultedDuration(20); // Proportional adjustment
-      } else {
-        // Desktop: Original speed
-        setEmployedDuration(40);
-        setConsultedDuration(30);
-      }
-    };
+      <div className="flex">
+        {/* Under reduced motion the row stands still, so one set wraps to show every logo. */}
+        <div
+          className={`flex items-center flex-nowrap will-change-transform motion-reduce:w-full motion-reduce:flex-wrap motion-reduce:justify-center ${trackClassName}`}
+          style={isPaused ? { animationPlayState: 'paused' } : undefined}
+        >
+          {marquee.map((company, idx) => {
+            const isRepeat = idx >= companies.length;
+            return (
+              <div
+                key={`${company.name}-${idx}`}
+                aria-hidden={isRepeat || undefined}
+                className={`flex-shrink-0 flex items-center justify-center group ${isRepeat ? 'motion-reduce:hidden' : ''}`}
+              >
+                {company.logo ? (
+                  <div className={`relative ${company.dimensions || DEFAULT_DIMENSIONS}`}>
+                    <Image
+                      src={company.logo}
+                      alt={company.name}
+                      className={`object-contain transition-all duration-500 w-full h-full ${company.className || 'grayscale brightness-[0.3] group-hover:grayscale-0 group-hover:brightness-100'} ${company.hoverLogo ? 'group-hover:opacity-0' : ''}`}
+                    />
+                    {company.hoverLogo && (
+                      <Image
+                        src={company.hoverLogo}
+                        alt=""
+                        className={`absolute inset-0 object-contain transition-all duration-500 opacity-0 group-hover:opacity-100 w-full h-full ${company.className || ''}`}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-[#181818] group-hover:text-[#8a6d3b] text-base md:text-lg font-medium tracking-wide whitespace-nowrap transition-colors duration-300">{company.name}</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
 
-    // Set initial value
-    handleResize();
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+export default function LogosSection() {
+  const [isPaused, setIsPaused] = React.useState(false);
 
   return (
     <section id="expertise" className="py-20 md:py-48 bg-[#FFF7F2] relative overflow-hidden">
@@ -145,54 +178,11 @@ export default function LogosSection() {
             <div className="w-16 h-px bg-[#8a6d3b] mx-auto"></div>
           </div>
 
-          <div className="relative overflow-hidden w-full mt-2">
-            {/* Gradient overlays for fade effect - visible on all devices */}
-            <div className="absolute left-0 top-0 bottom-0 w-12 md:w-32 bg-gradient-to-r from-[#FFF7F2] to-transparent z-10"></div>
-            <div className="absolute right-0 top-0 bottom-0 w-12 md:w-32 bg-gradient-to-l from-[#FFF7F2] to-transparent z-10"></div>
-
-            <div className="flex">
-              <motion.div
-                className="flex items-center gap-4 md:gap-16 flex-nowrap will-change-transform"
-                animate={{
-                  x: ["-33.33%", "0%"],
-                }}
-                transition={{
-                  x: {
-                    repeat: Infinity,
-                    repeatType: "loop",
-                    duration: employedDuration,
-                    ease: "linear",
-                  },
-                }}
-              >
-                {employedMarquee.map((company, idx) => (
-                  <div
-                    key={`employed-${idx}`}
-                    className="flex-shrink-0 flex items-center justify-center group"
-                  >
-                    {company.logo ? (
-                      <div className={`relative ${company.dimensions || DEFAULT_DIMENSIONS}`}>
-                        <Image
-                          src={company.logo}
-                          alt={company.name}
-                          className={`object-contain transition-all duration-500 w-full h-full ${company.className || 'grayscale brightness-[0.3] group-hover:grayscale-0 group-hover:brightness-100'} ${company.hoverLogo ? 'group-hover:opacity-0' : ''}`}
-                        />
-                        {company.hoverLogo && (
-                          <Image
-                            src={company.hoverLogo}
-                            alt={`${company.name} hover`}
-                            className={`absolute inset-0 object-contain transition-all duration-500 opacity-0 group-hover:opacity-100 w-full h-full ${company.className || ''}`}
-                          />
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-[#181818] group-hover:text-[#c5a059] text-base md:text-lg font-medium tracking-wide whitespace-nowrap transition-colors duration-300">{company.name}</span>
-                    )}
-                  </div>
-                ))}
-              </motion.div>
-            </div>
-          </div>
+          <LogoMarquee
+            companies={EMPLOYED_BY_COMPANIES}
+            trackClassName="gap-4 md:gap-16 motion-safe:animate-[logo-marquee_25s_linear_infinite] motion-safe:md:animate-[logo-marquee_40s_linear_infinite]"
+            isPaused={isPaused}
+          />
         </motion.div>
 
         {/* Consulted With Marquee */}
@@ -207,55 +197,23 @@ export default function LogosSection() {
             <div className="w-16 h-px bg-[#8a6d3b] mx-auto"></div>
           </div>
 
-          <div className="relative overflow-hidden w-full mt-2">
-            {/* Gradient overlays for fade effect */}
-            <div className="absolute left-0 top-0 bottom-0 w-12 md:w-32 bg-gradient-to-r from-[#FFF7F2] to-transparent z-10"></div>
-            <div className="absolute right-0 top-0 bottom-0 w-12 md:w-32 bg-gradient-to-l from-[#FFF7F2] to-transparent z-10"></div>
-
-            <div className="flex">
-              <motion.div
-                className="flex items-center gap-8 md:gap-24 flex-nowrap will-change-transform"
-                animate={{
-                  x: ["-33.33%", "0%"],
-                }}
-                transition={{
-                  x: {
-                    repeat: Infinity,
-                    repeatType: "loop",
-                    duration: consultedDuration,
-                    ease: "linear",
-                  },
-                }}
-              >
-                {consultedMarquee.map((company, idx) => (
-                  <div
-                    key={`consulted-${idx}`}
-                    className="flex-shrink-0 flex items-center justify-center group"
-                  >
-                    {company.logo ? (
-                      <div className={`relative ${company.dimensions || DEFAULT_DIMENSIONS}`}>
-                        <Image
-                          src={company.logo}
-                          alt={company.name}
-                          className={`object-contain transition-all duration-500 w-full h-full ${company.className || 'grayscale brightness-[0.3] group-hover:grayscale-0 group-hover:brightness-100'} ${company.hoverLogo ? 'group-hover:opacity-0' : ''}`}
-                        />
-                        {company.hoverLogo && (
-                          <Image
-                            src={company.hoverLogo}
-                            alt={`${company.name} hover`}
-                            className={`absolute inset-0 object-contain transition-all duration-500 opacity-0 group-hover:opacity-100 w-full h-full ${company.className || ''}`}
-                          />
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-[#181818] group-hover:text-[#c5a059] text-base md:text-lg font-medium tracking-wide whitespace-nowrap transition-colors duration-300">{company.name}</span>
-                    )}
-                  </div>
-                ))}
-              </motion.div>
-            </div>
-          </div>
+          <LogoMarquee
+            companies={CONSULTED_WITH_COMPANIES}
+            trackClassName="gap-8 md:gap-24 motion-safe:animate-[logo-marquee_20s_linear_infinite] motion-safe:md:animate-[logo-marquee_30s_linear_infinite]"
+            isPaused={isPaused}
+          />
         </motion.div>
+
+        <div className="mt-10 flex justify-center motion-reduce:hidden">
+          <button
+            type="button"
+            onClick={() => setIsPaused((prev) => !prev)}
+            aria-label={isPaused ? 'Play logo animation' : 'Pause logo animation'}
+            className="w-10 h-10 rounded-full border border-[#181818]/50 text-[#181818] flex items-center justify-center cursor-pointer transition-colors duration-300 hover:bg-[#181818] hover:text-[#FFF7F2] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8a6d3b] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FFF7F2]"
+          >
+            {isPaused ? <Play className="w-4 h-4" aria-hidden="true" /> : <Pause className="w-4 h-4" aria-hidden="true" />}
+          </button>
+        </div>
       </div>
     </section>
   );

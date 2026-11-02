@@ -18,7 +18,7 @@ export default function CTASection() {
           >
             <h2 className="text-5xl md:text-7xl font-serif text-[#181818] mb-8 leading-tight">
               Let&apos;s Talk About<br />
-              <span className="italic text-white">Your Situation</span>
+              <span className="italic text-[#181818]">Your Situation</span>
             </h2>
             <p className="text-[#181818] text-lg leading-relaxed mb-8">
               We offer an initial complimentary discovery call and where practical, an in-person meeting where we will:

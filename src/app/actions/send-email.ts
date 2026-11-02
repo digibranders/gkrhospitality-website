@@ -1,25 +1,41 @@
 'use server';
 
 import * as Brevo from '@getbrevo/brevo';
+import * as Sentry from '@sentry/nextjs';
 import { headers } from 'next/headers';
 import { validateContactSubmission } from '@/lib/contact';
+import { contactFormLimiter } from '@/lib/rate-limit';
 
 const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+const SENTRY_FLUSH_TIMEOUT_MS = 2000;
 const FALLBACK_ERROR = 'We could not send your message. Please try again, or email connect@gkrhospitality.com.';
+// Cloudflare codes caused by the visitor's token, such as an expired challenge. Any other code is our fault.
+const TURNSTILE_VISITOR_CODES = new Set(['missing-input-response', 'invalid-input-response', 'timeout-or-duplicate']);
 
 interface BrevoApiError {
   message?: string;
+  statusCode?: number;
   response?: { body?: unknown };
 }
 
 type SendResult = { success: true } | { success: false; error: string };
 
-function getBrevoErrorInfo(error: unknown): { message?: string; body?: unknown } {
+function getBrevoErrorInfo(error: unknown): { message?: string; statusCode?: number; body?: unknown } {
   if (typeof error === 'object' && error !== null) {
     const brevoError = error as BrevoApiError;
-    return { message: brevoError.message, body: brevoError.response?.body };
+    return { message: brevoError.message, statusCode: brevoError.statusCode, body: brevoError.response?.body };
   }
   return { message: error instanceof Error ? error.message : String(error) };
+}
+
+/**
+ * Alerts on a contact form fault. Never pass an error from Brevo here: it can carry
+ * the request, which holds the visitor's details. Flushes because a serverless
+ * function can freeze as soon as the action returns.
+ */
+async function reportFailure(error: unknown, area: 'config' | 'turnstile' | 'brevo'): Promise<void> {
+  Sentry.captureException(error, { tags: { contact_form: area } });
+  await Sentry.flush(SENTRY_FLUSH_TIMEOUT_MS);
 }
 
 /** Read at call time, so configuration changes and tests do not depend on import order. */
@@ -57,11 +73,16 @@ async function verifyTurnstile(token: string, secret: string): Promise<boolean> 
   });
   if (!response.ok) {
     console.error('Turnstile verification request failed with status', response.status);
+    await reportFailure(new Error(`Turnstile verification request failed with status ${response.status}`), 'turnstile');
     return false;
   }
   const result = (await response.json()) as { success?: boolean; 'error-codes'?: string[] };
   if (!result.success) {
-    console.error('Turnstile verification failed:', result['error-codes']);
+    const codes = result['error-codes'] ?? [];
+    console.error('Turnstile verification failed:', codes);
+    if (codes.some((code) => !TURNSTILE_VISITOR_CODES.has(code))) {
+      await reportFailure(new Error(`Turnstile rejected the verification request: ${codes.join(', ')}`), 'turnstile');
+    }
     return false;
   }
   return true;
@@ -76,9 +97,15 @@ export async function sendContactEmail(input: unknown): Promise<SendResult> {
   if (!validation.ok) return { success: false, error: validation.message };
   const form = validation.data;
 
+  // Checked before Turnstile and Brevo, so a flood costs neither of them a request.
+  if (!contactFormLimiter.allow((await visitorIp()) ?? 'unknown')) {
+    return { success: false, error: 'Too many messages in a short time. Please try again in a few minutes.' };
+  }
+
   const config = emailConfig();
   if (!config.apiKey || !config.templateId || !config.turnstileSecret) {
     console.error('Contact form is missing BREVO_API_KEY, BREVO_TEMPLATE_ID or TURNSTILE_SECRET_KEY');
+    await reportFailure(new Error('Contact form is missing its Brevo or Turnstile configuration'), 'config');
     return { success: false, error: FALLBACK_ERROR };
   }
 
@@ -88,6 +115,7 @@ export async function sendContactEmail(input: unknown): Promise<SendResult> {
     }
   } catch (error) {
     console.error('Error verifying Turnstile token:', error);
+    await reportFailure(error, 'turnstile');
     return { success: false, error: 'The robot check could not be completed. Please try again.' };
   }
 
@@ -113,8 +141,9 @@ export async function sendContactEmail(input: unknown): Promise<SendResult> {
   try {
     await apiInstance.sendTransacEmail(adminEmail);
   } catch (error: unknown) {
-    const { message, body } = getBrevoErrorInfo(error);
+    const { message, statusCode, body } = getBrevoErrorInfo(error);
     console.error('Error calling Brevo API for admin email:', { message, response: body });
+    await reportFailure(new Error(`Brevo admin email failed with status ${statusCode ?? 'unknown'}`), 'brevo');
     return { success: false, error: FALLBACK_ERROR };
   }
 

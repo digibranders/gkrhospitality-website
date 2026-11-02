@@ -14,3 +14,5 @@ minimumReleaseAgeExclude:
   - '@next/swc-win32-arm64-msvc@16.3.3'
   - '@next/swc-win32-x64-msvc@16.3.3'
   - next@16.3.3
+overrides:
+  zod: ^4.6.6
