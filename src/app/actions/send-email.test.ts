@@ -15,7 +15,15 @@ vi.mock('next/headers', () => ({
   headers: async () => new Headers({ 'x-forwarded-for': '203.0.113.7, 10.0.0.1' }),
 }));
 
+const captureException = vi.fn();
+
+vi.mock('@sentry/nextjs', () => ({
+  captureException,
+  flush: vi.fn(async () => true),
+}));
+
 const { sendContactEmail } = await import('./send-email');
+const { contactFormLimiter } = await import('@/lib/rate-limit');
 
 const submission = {
   name: 'Maria Okafor',
@@ -42,6 +50,7 @@ beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);
   fetchMock.mockResolvedValue(new Response(JSON.stringify({ success: true }), { status: 200 }));
   sendTransacEmail.mockResolvedValue({});
+  contactFormLimiter.reset();
 });
 
 afterEach(() => {
@@ -51,6 +60,16 @@ afterEach(() => {
 });
 
 describe('sendContactEmail', () => {
+  it('refuses a visitor who sends too many messages, before contacting Cloudflare or Brevo', async () => {
+    for (let i = 0; i < 5; i += 1) await sendContactEmail(submission);
+    fetchMock.mockClear();
+    sendTransacEmail.mockClear();
+    const result = await sendContactEmail(submission);
+    expect(errorText(result)).toMatch(/too many messages/i);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(sendTransacEmail).not.toHaveBeenCalled();
+  });
+
   it('rejects invalid input before contacting Cloudflare or Brevo', async () => {
     const result = await sendContactEmail({ ...submission, role: 'Hacker' });
     expect(result).toEqual({ success: false, error: 'Please select your role.' });
@@ -107,5 +126,60 @@ describe('sendContactEmail', () => {
     const result = await sendContactEmail(submission);
     expect(result.success).toBe(false);
     expect(errorText(result)).not.toMatch(/configuration/i);
+  });
+
+  describe('Sentry alerts', () => {
+    it('reports a failed admin email without any visitor data', async () => {
+      sendTransacEmail.mockRejectedValueOnce(
+        Object.assign(new Error('HTTP request failed'), {
+          statusCode: 401,
+          response: { body: { message: `bad recipient ${submission.email}`, request: submission } },
+        }),
+      );
+      await sendContactEmail(submission);
+
+      expect(captureException).toHaveBeenCalledTimes(1);
+      const [reported, context] = captureException.mock.calls[0];
+      expect((reported as Error).message).toBe('Brevo admin email failed with status 401');
+      expect(context).toEqual({ tags: { contact_form: 'brevo' } });
+
+      const payload = `${(reported as Error).message} ${JSON.stringify(reported)} ${JSON.stringify(context)}`;
+      for (const value of [submission.name, submission.email, submission.company, submission.message]) {
+        expect(payload).not.toContain(value);
+      }
+    });
+
+    it('reports Turnstile outages and rejected secrets', async () => {
+      fetchMock.mockResolvedValueOnce(new Response('Bad gateway', { status: 502 }));
+      await sendContactEmail(submission);
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ success: false, 'error-codes': ['invalid-input-secret'] }), { status: 200 }),
+      );
+      await sendContactEmail(submission);
+      fetchMock.mockRejectedValueOnce(new TypeError('fetch failed'));
+      await sendContactEmail(submission);
+
+      expect(captureException).toHaveBeenCalledTimes(3);
+      expect(captureException.mock.calls[1][0].message).toContain('invalid-input-secret');
+    });
+
+    it('stays quiet when a visitor only has an expired token', async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ success: false, 'error-codes': ['timeout-or-duplicate'] }), { status: 200 }),
+      );
+      await sendContactEmail(submission);
+      expect(captureException).not.toHaveBeenCalled();
+    });
+
+    it('reports missing configuration', async () => {
+      vi.stubEnv('BREVO_API_KEY', '');
+      await sendContactEmail(submission);
+      expect(captureException.mock.calls[0][1]).toEqual({ tags: { contact_form: 'config' } });
+    });
+
+    it('stays quiet on a successful send', async () => {
+      await sendContactEmail(submission);
+      expect(captureException).not.toHaveBeenCalled();
+    });
   });
 });

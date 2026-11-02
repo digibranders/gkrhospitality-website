@@ -4,9 +4,10 @@
  * Pure functions only. File and Chrome access live in build.ts, so everything
  * here is covered by report.test.ts without touching the disk or a browser.
  */
-import { monthRange, nextPeriod, previousPeriod } from "./periods.ts";
+import { monthRange, nextPeriod, previousPeriod, propertyDate } from "./periods.ts";
 import { barList, dailyColumns, fillDays } from "./charts.ts";
-import { attentionFromHealth, registrarName } from "./health.ts";
+import { CERTIFICATE_WARNING_DAYS, DOMAIN_WARNING_DAYS, attentionFromHealth, registrarName } from "./health.ts";
+import { normalizePath } from "./search-console.ts";
 import type { DayStats, DeviceStats, Indexing, PageStats, QueryStats, Totals } from "./search-console.ts";
 import type { AnalyticsTotals, Ranked, VisitorDetail } from "./analytics.ts";
 import type { AttentionItem, HealthReport } from "./health.ts";
@@ -117,17 +118,33 @@ export interface MonthlyReport {
   figures: Figure[];
   improvementsNote: string;
   improvements: Improvement[];
-  /** Figures only Vercel knows; entered by hand from the Vercel dashboard. */
+  /** Figures only Vercel knows; entered by hand from the Vercel dashboard. Null for a month with no health check. */
   operations: {
     deployments: { succeeded: number; total: number };
     runtimeErrors: { count: number; days: number };
-  };
+  } | null;
   /** Extra items for "Needs your attention", on top of those the health check raises. */
   attention: AttentionItem[];
   /** What is planned for next month, one line each. */
   nextMonth: string[];
   /** Optional per-month masthead photo; falls back to config.client.heroImage. */
   heroImage?: string;
+  /**
+   * True for an illustrative report built from samples/ with synthetic figures.
+   * The report then names no data source and carries a visible label, so the
+   * figures cannot be mistaken for measured ones.
+   */
+  sample: boolean;
+  /**
+   * False for months before GA4 and Search Console were set up (September 2026).
+   * The report is then one page with no visitor or search numbers.
+   */
+  tracked: boolean;
+  /**
+   * For a month nobody ran the health check: site health facts taken from
+   * records (certificate logs, the registry, Vercel, the code), entered by hand.
+   */
+  healthRecords: { label: string; value: string; note: string }[];
 }
 
 export class ReportValidationError extends Error {
@@ -149,6 +166,8 @@ const FIGURE_COUNT = 4;
 const MAX_IMPROVEMENTS = 4;
 const MAX_TABLE_ROWS = 5;
 const MAX_ATTENTION = 3;
+/** Hand-written items plus those the health check raises, which can be 4 on its own. */
+const MAX_ATTENTION_TOTAL = 4;
 const MAX_NEXT_MONTH = 5;
 const CARE_AREA_COUNT = 6;
 const LIMITS = {
@@ -161,10 +180,13 @@ const LIMITS = {
   improvementsNote: 110,
   improvementArea: 24,
   improvementTitle: 36, // one line
-  improvementBody: 84, // two lines
+  improvementBody: 80, // two lines at 12px
   careCheck: 28,
   attentionTitle: 60,
   attentionDetail: 140,
+  tileLabel: 24,
+  tileValue: 14,
+  tileNote: 30,
   nextMonthItem: 72, // one line at 11.5px across the content column
   short: 60,
 } as const;
@@ -336,7 +358,7 @@ export function parseConfig(input: unknown): ReportConfig {
   return config;
 }
 
-function operations(c: Checker, raw: unknown): MonthlyReport["operations"] {
+function operations(c: Checker, raw: unknown): NonNullable<MonthlyReport["operations"]> {
   const ops = c.record(raw, "operations") ?? {};
   const deployments = c.record(ops.deployments, "operations.deployments") ?? {};
   const errors = c.record(ops.runtimeErrors, "operations.runtimeErrors") ?? {};
@@ -427,7 +449,7 @@ export function parseMonth(input: unknown, config: ReportConfig, source = "month
         body: c.text(item.body, `improvements[${i}].body`, LIMITS.improvementBody),
       };
     }),
-    operations: operations(c, root.operations),
+    operations: root.operations === undefined ? null : operations(c, root.operations),
     attention: (c.array(root.attention ?? [], "attention") ?? []).map((raw, i) => {
       const item = c.record(raw, `attention[${i}]`) ?? {};
       return {
@@ -438,7 +460,20 @@ export function parseMonth(input: unknown, config: ReportConfig, source = "month
     nextMonth: (c.array(root.nextMonth, "nextMonth") ?? []).map((line, i) =>
       c.text(line, `nextMonth[${i}]`, LIMITS.nextMonthItem),
     ),
+    sample: root.sample === true,
+    tracked: root.tracked !== false,
+    healthRecords: (c.array(root.healthRecords ?? [], "healthRecords") ?? []).map((raw, i) => {
+      const item = c.record(raw, `healthRecords[${i}]`) ?? {};
+      return {
+        label: c.text(item.label, `healthRecords[${i}].label`, LIMITS.tileLabel),
+        value: c.text(item.value, `healthRecords[${i}].value`, LIMITS.tileValue),
+        note: c.text(item.note, `healthRecords[${i}].note`, LIMITS.tileNote),
+      };
+    }),
   };
+  if (month.healthRecords.length > 0 && ![3, 4, 6, 8].includes(month.healthRecords.length)) {
+    c.fail("healthRecords", `must have 3, 4, 6 or 8 items to fill the tile rows (found ${month.healthRecords.length})`);
+  }
   if (month.attention.length > MAX_ATTENTION) {
     c.fail("attention", `must have at most ${MAX_ATTENTION} items to fit the box (found ${month.attention.length})`);
   }
@@ -446,6 +481,8 @@ export function parseMonth(input: unknown, config: ReportConfig, source = "month
     c.fail("nextMonth", `must have 1 to ${MAX_NEXT_MONTH} items (found ${month.nextMonth.length})`);
   }
   if (root.heroImage !== undefined) month.heroImage = c.asset(root.heroImage, "heroImage");
+  if (root.sample !== undefined && typeof root.sample !== "boolean") c.fail("sample", "must be true or false");
+  if (root.tracked !== undefined && typeof root.tracked !== "boolean") c.fail("tracked", "must be true or false");
 
   c.throwIfAny(source);
   return month;
@@ -580,7 +617,7 @@ function visitorDetail(c: Checker, raw: unknown): VisitorDetail {
 }
 
 /** Validates months/YYYY-MM.health.json, the file fetch-health.ts writes. */
-export function parseHealth(input: unknown, source = "health file"): HealthReport {
+export function parseHealth(input: unknown, period: string, source = "health file"): HealthReport {
   const c = new Checker();
   const root = c.record(input, "health") ?? {};
   const tls = c.record(root.tls, "tls") ?? {};
@@ -620,7 +657,15 @@ export function parseHealth(input: unknown, source = "health file"): HealthRepor
     },
     versions: { next: c.text(versions.next, "versions.next", 20), react: c.text(versions.react, "versions.react", 20) },
   };
-  if (report.checkedAt && Number.isNaN(Date.parse(report.checkedAt))) c.fail("checkedAt", "must be a date and time");
+  if (report.checkedAt) {
+    const checkedAt = new Date(report.checkedAt);
+    if (Number.isNaN(checkedAt.getTime())) c.fail("checkedAt", "must be a date and time");
+    // Checks often run just after the month ends, so only an earlier one is wrong.
+    else if (propertyDate(checkedAt) < monthRange(period).startDate) c.fail("checkedAt", `is before ${period}; check the site again`);
+  }
+  if (report.pages.ok + report.pages.failing.length !== report.pages.checked) {
+    c.fail("pages", "ok plus failing must equal checked");
+  }
   c.throwIfAny(source);
   return report;
 }
@@ -695,7 +740,8 @@ export function formatPeriod(period: string): { label: string; monthName: string
 export function reportFileStem(config: ReportConfig, month: MonthlyReport): string {
   const slug = (text: string): string =>
     text.replace(/&/g, "and").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-  return `${slug(config.client.name)}-Website-Care-Report-${slug(formatPeriod(month.period).label)}`;
+  const stem = `${slug(config.client.name)}-Website-Care-Report-${slug(formatPeriod(month.period).label)}`;
+  return month.sample ? `${stem}-Sample` : stem;
 }
 
 /* ------------------------------------------------------------------ */
@@ -710,7 +756,7 @@ const HTML_ESCAPES: Record<string, string> = {
   "'": "&#39;",
 };
 
-export function escapeHtml(text: string): string {
+function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]);
 }
 
@@ -755,6 +801,10 @@ function lowerFirstWord(text: string): string {
   return /^[A-Z][a-z]/.test(text) ? text.charAt(0).toLowerCase() + text.slice(1) : text;
 }
 
+function capitalise(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 function renderCareAreas(areas: CareArea[]): string {
   return areas
     .map((area) => {
@@ -771,6 +821,17 @@ function renderCareAreas(areas: CareArea[]): string {
 
 const numberFormat = new Intl.NumberFormat("en-US");
 const compactFormat = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
+const percentFormat = new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 0 });
+
+/** A share as a whole percent, where a non-zero part never reads "0%" and a part smaller than the whole never "100%". */
+function formatShare(part: number, whole: number): string {
+  // Capped at 100%: GA4's per-device session counts can add up to slightly more than the month's total.
+  const ratio = whole > 0 ? Math.min(1, part / whole) : 0;
+  const text = percentFormat.format(ratio);
+  if (ratio > 0 && text === "0%") return "under 1%";
+  if (ratio < 1 && text === "100%") return "over 99%";
+  return text;
+}
 
 /**
  * Big numbers for the stat row. Each stat column is about 100px wide, which
@@ -793,7 +854,9 @@ export function describeChange(
       ? { text: `Level with ${previousMonthName}`, direction: "level" }
       : { text: `Up from 0 in ${previousMonthName}`, direction: "up" };
   }
-  const percent = Math.round(((current - previous) / previous) * 100);
+  const rounded = Math.round(((current - previous) / previous) * 100);
+  // "Down 100%" would say nothing is left.
+  const percent = current > 0 ? Math.max(-99, rounded) : rounded;
   if (percent > 0) return { text: `Up ${numberFormat.format(percent)}% on ${previousMonthName}`, direction: "up" };
   if (percent < 0) return { text: `Down ${numberFormat.format(-percent)}% on ${previousMonthName}`, direction: "down" };
   return { text: `Level with ${previousMonthName}`, direction: "level" };
@@ -806,8 +869,8 @@ function renderChange(current: number, previous: number | null, previousMonthNam
 }
 
 /** Readable page name from config, falling back to the path itself. */
-export function pageName(path: string, pageNames: Record<string, string>): string {
-  return pageNames[path] ?? path;
+function pageName(path: string, pageNames: Record<string, string>): string {
+  return pageNames[path] ?? pageNames[normalizePath(path)] ?? path;
 }
 
 /** "2026-09-02" to "2026-09-28" becomes "2 to 28 September". Both dates are in the same month. */
@@ -817,10 +880,13 @@ function describeRange(startDate: string, endDate: string): string {
   return `${start[0]} to ${end[0]} ${end[1]}`;
 }
 
+const SAMPLE_SOURCE = "Illustrative figures";
+
 /** Where the page 1 numbers come from, and the days they cover. */
-function describeSources(analytics: AnalyticsReport, search: SearchReport, period: string): string {
+function describeSources(analytics: AnalyticsReport, search: SearchReport, period: string, sample: boolean): string {
   const month = monthRange(period);
   const analyticsRange = describeRange(analytics.startDate, analytics.throughDate);
+  if (sample) return `${SAMPLE_SOURCE}, ${analyticsRange}.`;
   if (!search.performance) return `Google Analytics, ${analyticsRange}.`;
   const searchRange = describeRange(month.startDate, search.performance.throughDate);
   return analyticsRange === searchRange
@@ -839,7 +905,7 @@ function renderStat(value: number, label: string, change: string): string {
 }
 
 /** "10 of 10 pages indexed by Google." */
-export function describeIndexing(indexing: Indexing): string {
+function describeIndexing(indexing: Indexing): string {
   const all = indexing.pagesIndexed === indexing.pagesChecked;
   return all
     ? `All ${indexing.pagesChecked} pages indexed by Google.`
@@ -860,7 +926,7 @@ function renderGlance(search: SearchReport, analytics: AnalyticsReport, monthNam
       ? `<div class="stat__change">${escapeHtml(`Tracking began ${formatDate(analytics.trackingStarted).split(" ").slice(0, 2).join(" ")}`)}</div>`
       : renderChange(current, previous, previousMonthName);
   // With no month to compare against, search visits show their share of all visits instead.
-  const searchShare = visitors.visits > 0 ? Math.round((visitors.searchVisits / visitors.visits) * 100) : 0;
+  const searchShare = formatShare(visitors.searchVisits, visitors.visits);
   const stats = [
     renderStat(visitors.visitors, "Visitors", visitorChange(visitors.visitors, before ? before.visitors : null)),
     renderStat(
@@ -868,7 +934,7 @@ function renderGlance(search: SearchReport, analytics: AnalyticsReport, monthNam
       "Search visits",
       before
         ? renderChange(visitors.searchVisits, before.searchVisits, previousMonthName)
-        : `<div class="stat__change">${escapeHtml(`${searchShare}% of all visits`)}</div>`,
+        : `<div class="stat__change">${escapeHtml(capitalise(`${searchShare} of all visits`))}</div>`,
     ),
   ];
   const perf = search.performance;
@@ -876,11 +942,11 @@ function renderGlance(search: SearchReport, analytics: AnalyticsReport, monthNam
     const previous = perf.previousTotals;
     // With no month to compare against, show what the month itself says instead of "no data" twice.
     const note = (text: string): string => `<div class="stat__change">${escapeHtml(text)}</div>`;
-    const clickRate = perf.totals.impressions > 0 ? Math.round((perf.totals.clicks / perf.totals.impressions) * 100) : 0;
+    const clickRate = formatShare(perf.totals.clicks, perf.totals.impressions);
     stats.push(
       renderStat(
         perf.totals.impressions,
-        "Impressions",
+        "Seen in Google",
         previous
           ? renderChange(perf.totals.impressions, previous.impressions, previousMonthName)
           : note(`Average position ${perf.totals.position.toFixed(1)}`),
@@ -888,7 +954,7 @@ function renderGlance(search: SearchReport, analytics: AnalyticsReport, monthNam
       renderStat(
         perf.totals.clicks,
         "Clicks",
-        previous ? renderChange(perf.totals.clicks, previous.clicks, previousMonthName) : note(`${clickRate}% of impressions`),
+        previous ? renderChange(perf.totals.clicks, previous.clicks, previousMonthName) : note(capitalise(`${clickRate} of impressions`)),
       ),
     );
   } else {
@@ -927,8 +993,6 @@ function renderAttention(items: AttentionItem[]): string {
 
 /* ---------- Page 2 ---------- */
 
-const percentFormat = new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 0 });
-
 function facts(items: [label: string, value: string][]): string {
   return [
     '        <dl class="facts">',
@@ -961,7 +1025,7 @@ function detailTable(
   return [
     '        <table class="dtable">',
     `          <caption>${escapeHtml(caption)}</caption>`,
-    `          <thead><tr><th scope="col">${escapeHtml(firstColumn)}</th><th scope="col">Shown</th><th scope="col">Clicks</th><th scope="col">Position</th></tr></thead>`,
+    `          <thead><tr><th scope="col">${escapeHtml(firstColumn)}</th><th scope="col">Seen</th><th scope="col">Clicks</th><th scope="col">Position</th></tr></thead>`,
     "          <tbody>",
     ...body,
     "          </tbody>",
@@ -969,7 +1033,7 @@ function detailTable(
   ].join("\n");
 }
 
-function renderSearchDetail(search: SearchReport, config: ReportConfig, period: string, monthName: string): string {
+function renderSearchDetail(search: SearchReport, config: ReportConfig, period: string, monthName: string, sample: boolean): string {
   const perf = search.performance;
   const rail = (sourceLine: string, extra: string): string =>
     [
@@ -988,31 +1052,21 @@ function renderSearchDetail(search: SearchReport, config: ReportConfig, period: 
     ].join("\n");
   }
   const range = monthRange(period);
-  const ctr = perf.totals.impressions > 0 ? perf.totals.clicks / perf.totals.impressions : 0;
   const railFacts = facts([
-    ["Click rate", percentFormat.format(ctr)],
+    ["Click rate", capitalise(formatShare(perf.totals.clicks, perf.totals.impressions))],
     ["Average position", perf.totals.position.toFixed(1)],
-    ...perf.devices.slice(0, 2).map((d): [string, string] => [`Shown on ${d.device.toLowerCase()}`, numberFormat.format(d.impressions)]),
+    ...perf.devices.slice(0, 2).map((d): [string, string] => [`Seen on ${d.device.toLowerCase()}`, numberFormat.format(d.impressions)]),
   ]);
-  const key = '        <p class="detail__key">Shown: impressions, the times the site appeared in Google results. Position: its average place in them, 1 being the top.</p>';
-  const days = (value: (d: DayStats) => number) =>
-    fillDays(perf.daily.map((d) => ({ date: d.date, value: value(d) })), range.startDate, perf.throughDate);
+  // The key sits under the tables, not in the rail, so the rail stays as short as the tables beside it.
+  const key = "Seen: how many times the site appeared in Google results. Position: its average place, 1 being the top.";
   const listedClicks = perf.queries.reduce((sum, q) => sum + q.clicks, 0);
   const coverage =
     perf.queries.length > 0 && listedClicks < perf.totals.clicks
       ? `        <p class="detail__note">${escapeHtml(`Google keeps rare searches private, so the searches listed cover ${numberFormat.format(listedClicks)} of ${numberFormat.format(perf.totals.clicks)} clicks.`)}</p>`
       : "";
   return [
-    rail(`Google Search, ${describeRange(range.startDate, perf.throughDate)}.`, `${railFacts}\n${key}`),
+    rail(`${sample ? SAMPLE_SOURCE : "Google Search"}, ${describeRange(range.startDate, perf.throughDate)}.`, railFacts),
     '      <div class="detail__body">',
-    '        <div class="detail__charts">',
-    "          <figure><figcaption>Times shown per day</figcaption>",
-    `            ${dailyColumns(days((d) => d.impressions), { width: 238, height: 56, title: "Times shown in Google per day" })}`,
-    "          </figure>",
-    "          <figure><figcaption>Clicks per day</figcaption>",
-    `            ${dailyColumns(days((d) => d.clicks), { width: 238, height: 56, title: "Clicks from Google per day" })}`,
-    "          </figure>",
-    "        </div>",
     '        <div class="detail__tables">',
     detailTable("What people searched", "Search", perf.queries.map((q) => ({ name: q.query, ...q }))),
     detailTable(
@@ -1021,6 +1075,7 @@ function renderSearchDetail(search: SearchReport, config: ReportConfig, period: 
       perf.pages.map((p) => ({ name: pageName(p.path, config.searchConsole.pageNames), ...p })),
     ),
     "        </div>",
+    `        <p class="detail__note">${escapeHtml(key)}</p>`,
     coverage,
     "      </div>",
   ].join("\n");
@@ -1037,8 +1092,7 @@ function formatDuration(seconds: number): string {
  * better as words than as a chart, and take one line instead of two lists.
  */
 function audienceNote(d: VisitorDetail, totalVisits: number): string {
-  // Capped at 100%: GA4's per-device session counts can add up to slightly more than the month's total.
-  const share = (part: number): string => percentFormat.format(totalVisits > 0 ? Math.min(1, part / totalVisits) : 0);
+  const share = (part: number): string => formatShare(part, totalVisits);
   const devices = d.devices
     .filter((item) => item.name !== "Other")
     .slice(0, 2)
@@ -1048,10 +1102,10 @@ function audienceNote(d: VisitorDetail, totalVisits: number): string {
     devices.length ? `Visits were ${devices.join(" and ")}` : "",
     country ? `${share(country.visits)} came from ${country.name === "United States" ? "the United States" : country.name}` : "",
   ].filter(Boolean);
-  return parts.length ? `        <p class="detail__note detail__note--wide">${escapeHtml(`${parts.join(", and ")}.`)}</p>` : "";
+  return parts.length ? `        <p class="detail__note detail__note--wide">${escapeHtml(capitalise(`${parts.join(", and ")}.`))}</p>` : "";
 }
 
-function renderVisitorDetail(analytics: AnalyticsReport, config: ReportConfig): string {
+function renderVisitorDetail(analytics: AnalyticsReport, config: ReportConfig, sample: boolean): string {
   const d = analytics.detail;
   // Shares are of all visits. The country list holds only the top few, so summing it would overstate the leader.
   const totalVisits = analytics.current.visits;
@@ -1061,7 +1115,7 @@ function renderVisitorDetail(analytics: AnalyticsReport, config: ReportConfig): 
   return [
     '      <div class="section__title">',
     '        <h2 id="visitor-detail-title">Visitors in detail</h2>',
-    `        <p>${escapeHtml(`Google Analytics, ${describeRange(analytics.startDate, analytics.throughDate)}.`)}</p>`,
+    `        <p>${escapeHtml(`${sample ? SAMPLE_SOURCE : "Google Analytics"}, ${describeRange(analytics.startDate, analytics.throughDate)}.`)}</p>`,
     facts([
       ["Page views", count(d.pageViews)],
       ["Engaged visits", percentFormat.format(d.engagementRate)],
@@ -1087,29 +1141,39 @@ interface HealthTile {
   flag: boolean;
 }
 
-function healthTiles(health: HealthReport, month: MonthlyReport, indexing: Indexing, now: Date): HealthTile[] {
+function healthTiles(
+  health: HealthReport,
+  month: MonthlyReport,
+  indexing: Indexing | null,
+  now: Date,
+  pageNames: Record<string, string>,
+): HealthTile[] {
   const daysUntil = (iso: string): number => Math.floor((Date.parse(`${iso}T00:00:00Z`) - now.getTime()) / 86_400_000);
   // "2026-12-05" becomes "5 Dec 2026", short enough for a quarter-width tile.
   const shortDay = (iso: string): string => {
     const [day, monthName, year] = formatDate(iso).split(" ");
     return `${day} ${monthName.slice(0, 3)} ${year}`;
   };
+  if (!month.operations) throw new Error(`${month.period} has site health readings, so it needs "operations" from Vercel.`);
   const { deployments, runtimeErrors } = month.operations;
   const alerts = health.audit;
-  const alertCount = alerts.critical + alerts.high + alerts.moderate + alerts.low;
-  const worst = alerts.critical ? "critical" : alerts.high ? "high" : alerts.moderate ? "moderate" : alerts.low ? "low" : "";
+  // Serious (critical and high) alerts are counted on their own, so a total never borrows the worst severity's name.
+  const serious = alerts.critical + alerts.high;
+  const minor = alerts.moderate + alerts.low;
+  // validTo is a UTC date, so it is compared with the check's UTC day: a certificate is still valid on its last day.
+  const expired = health.tls.validTo < now.toISOString().slice(0, 10);
   return [
     {
       label: "Security certificate",
-      value: "Valid",
-      note: `Until ${shortDay(health.tls.validTo)}`,
-      flag: daysUntil(health.tls.validTo) <= 14,
+      value: expired ? "Expired" : "Valid",
+      note: `${expired ? "On" : "Until"} ${shortDay(health.tls.validTo)}`,
+      flag: daysUntil(health.tls.validTo) <= CERTIFICATE_WARNING_DAYS,
     },
     {
       label: "Domain renews",
       value: shortDay(health.domain.expires),
       note: `With ${registrarName(health.domain.registrar)}`,
-      flag: daysUntil(health.domain.expires) <= 90,
+      flag: daysUntil(health.domain.expires) <= DOMAIN_WARNING_DAYS,
     },
     {
       label: "Pages responding",
@@ -1117,16 +1181,28 @@ function healthTiles(health: HealthReport, month: MonthlyReport, indexing: Index
       note: health.pages.failing.length ? `Not loading: ${health.pages.failing.map((p) => p.path).join(", ")}` : "Every page checked",
       flag: health.pages.failing.length > 0,
     },
-    {
-      label: "Indexed by Google",
-      value: `${indexing.pagesIndexed} of ${indexing.pagesChecked}`,
-      note: indexing.notIndexed.length ? `Missing: ${indexing.notIndexed.join(", ")}` : "Every page checked",
-      flag: indexing.notIndexed.length > 0,
-    },
+    // Indexing comes from Search Console; a month without it shows page speed instead.
+    indexing
+      ? {
+          label: "Indexed by Google",
+          value: `${indexing.pagesIndexed} of ${indexing.pagesChecked}`,
+          note: !indexing.notIndexed.length
+            ? "Every page checked"
+            : indexing.notIndexed.length > 2
+              ? `${indexing.notIndexed.length} pages not indexed`
+              : `Missing: ${indexing.notIndexed.join(", ")}`,
+          flag: indexing.notIndexed.length > 0,
+        }
+      : {
+          label: "Average load time",
+          value: `${numberFormat.format(health.pages.averageMs)} ms`,
+          note: health.pages.slowest ? `Slowest: ${pageName(health.pages.slowest.path, pageNames)}` : "Every page checked",
+          flag: false,
+        },
     {
       label: "Deployments",
-      value: `${deployments.succeeded} of ${deployments.total}`,
-      note: "Succeeded this month",
+      value: deployments.total === 0 ? "None" : `${deployments.succeeded} of ${deployments.total}`,
+      note: deployments.total === 0 ? "No site changes this month" : "Succeeded this month",
       flag: deployments.succeeded < deployments.total,
     },
     {
@@ -1138,14 +1214,18 @@ function healthTiles(health: HealthReport, month: MonthlyReport, indexing: Index
     {
       label: "Security headers",
       value: `${health.headers.present.length} of ${health.headers.present.length + health.headers.missing.length}`,
-      note: health.headers.missing.length ? `To add: ${lowerFirstWord(health.headers.missing.join(", "))}` : "All in place",
+      note: !health.headers.missing.length
+        ? "All in place"
+        : health.headers.missing.length > 1
+          ? `${health.headers.missing.length} still to add`
+          : `To add: ${lowerFirstWord(health.headers.missing[0])}`,
       flag: false,
     },
     {
       label: "Security alerts in code",
-      value: alertCount === 0 ? "None" : `${alertCount} ${worst}`,
+      value: serious > 0 ? `${serious} serious` : minor > 0 ? `${minor} minor` : "None",
       note: `Next.js ${health.versions.next}, React ${health.versions.react}`,
-      flag: alerts.critical + alerts.high > 0,
+      flag: serious > 0,
     },
   ];
 }
@@ -1164,6 +1244,43 @@ function renderHealthTiles(tiles: HealthTile[]): string {
     .join("\n");
 }
 
+/** Site health: on page 2 of a full report, or on the single page of an untracked month. */
+function renderHealthSection(checked: string, tiles: HealthTile[]): string {
+  // Three or six tiles sit in three columns; four or eight in four.
+  const columns = tiles.length % 3 === 0 && tiles.length % 4 !== 0 ? " tiles--three" : "";
+  return [
+    '    <section class="section detail" aria-labelledby="health-title">',
+    '      <div class="section__title">',
+    '        <h2 id="health-title">Site health</h2>',
+    `        <p>${escapeHtml(checked)}</p>`,
+    "      </div>",
+    `      <ul class="tiles${columns}">`,
+    renderHealthTiles(tiles),
+    "      </ul>",
+    "    </section>",
+  ].join("\n");
+}
+
+/**
+ * Next month's plan for a one-page report. The standing monthly checks only
+ * fit when there is no site health section above them.
+ */
+function renderOnePagePlans(nextMonthName: string, items: string[], careAreas: string | null): string {
+  return [
+    '    <section class="plans" aria-label="Next month">',
+    '      <div class="plans__next">',
+    `        <h2>Coming in ${escapeHtml(nextMonthName)}</h2>`,
+    "        <ul>",
+    renderNextMonth(items),
+    "        </ul>",
+    "      </div>",
+    ...(careAreas
+      ? ['      <div class="areas-wrap">', "        <h2>Checked every month</h2>", '        <ul class="areas">', careAreas, "        </ul>", "      </div>"]
+      : []),
+    "    </section>",
+  ].join("\n");
+}
+
 function renderNextMonth(items: string[]): string {
   return items.map((item) => `        <li>${escapeHtml(item)}</li>`).join("\n");
 }
@@ -1177,23 +1294,53 @@ export function renderReport(
   template: string,
   config: ReportConfig,
   month: MonthlyReport,
-  search: SearchReport,
-  analytics: AnalyticsReport,
-  health: HealthReport,
+  search: SearchReport | null,
+  analytics: AnalyticsReport | null,
+  health: HealthReport | null,
 ): string {
+  if (month.tracked && !health) throw new Error(`${month.period} is tracked, so it needs site health readings.`);
+  if (month.tracked !== Boolean(search && analytics)) {
+    throw new Error(
+      month.tracked
+        ? `${month.period} is tracked, so it needs both the search and the analytics data.`
+        : `${month.period} says "tracked": false, so it must not be given search or analytics data.`,
+    );
+  }
   const period = formatPeriod(month.period);
   const previousMonth = formatPeriod(previousPeriod(month.period)).monthName;
   const nextMonthName = formatPeriod(nextPeriod(month.period)).monthName;
   // Dates in the report are judged against when the site was checked, so a rebuild gives the same PDF.
-  const checkedAt = new Date(health.checkedAt);
-  const attention = [...attentionFromHealth(health, checkedAt), ...month.attention];
+  // A month nobody checked (no health readings) shows no health section rather than invented readings.
+  const checkedAt = health ? new Date(health.checkedAt) : null;
+  const raised = health && checkedAt ? attentionFromHealth(health, checkedAt) : [];
+  const attention = [...raised, ...month.attention];
+  if (attention.length > MAX_ATTENTION_TOTAL) {
+    throw new Error(
+      `${month.period} has ${attention.length} attention items (${raised.length} from the health check, ${month.attention.length} written by hand); ` +
+        `the box holds at most ${MAX_ATTENTION_TOTAL}. Remove some from "attention" in the month file.`,
+    );
+  }
+  if (health && month.healthRecords.length > 0) {
+    throw new Error(`${month.period} has health readings, so it must not also list "healthRecords".`);
+  }
+  const healthSection =
+    health && checkedAt
+      ? renderHealthSection(
+          month.sample ? `Illustrative readings, ${formatDate(propertyDate(checkedAt))}.` : `Checked ${formatDate(propertyDate(checkedAt))}.`,
+          healthTiles(health, month, search ? search.indexing : null, checkedAt, config.searchConsole.pageNames),
+        )
+      : month.healthRecords.length > 0
+        ? renderHealthSection(
+            `From the ${period.monthName} records: certificate logs, the domain registry, Vercel and the code.`,
+            month.healthRecords.map((record) => ({ ...record, flag: false })),
+          )
+        : "";
   const values: Record<string, string> = {
     pageTitle: escapeHtml(`${config.client.name}, Website Care Report, ${period.label}`),
     heroImage: escapeHtml(month.heroImage ?? config.client.heroImage),
     clientLogo: escapeHtml(config.client.logo),
     clientName: escapeHtml(config.client.name),
     clientDomain: escapeHtml(config.client.domain),
-    issuedDate: escapeHtml(formatDate(month.issued)),
     periodLabel: escapeHtml(period.label),
     monthName: escapeHtml(period.monthName),
     nextMonthName: escapeHtml(nextMonthName),
@@ -1202,21 +1349,28 @@ export function renderReport(
     figures: renderFigures(month.figures),
     improvementsNote: escapeHtml(month.improvementsNote),
     improvements: renderImprovements(month.improvements),
-    dataSources: escapeHtml(describeSources(analytics, search, month.period)),
-    searchIndexing: escapeHtml(describeIndexing(search.indexing)),
-    glance: renderGlance(search, analytics, period.monthName, previousMonth),
+    // A month without tracking is one page: its visitor and search sections are empty and hidden.
+    reportLayout: search && analytics ? "report--full" : "report--single",
+    pageOneLabel: search && analytics ? "Page 1 of 2" : "",
+    dataSources: search && analytics ? escapeHtml(describeSources(analytics, search, month.period, month.sample)) : "",
+    searchIndexing: search ? escapeHtml(describeIndexing(search.indexing)) : "",
+    glance: search && analytics ? renderGlance(search, analytics, period.monthName, previousMonth) : "",
     attention: renderAttention(attention),
-    searchDetail: renderSearchDetail(search, config, month.period, period.monthName),
-    visitorDetail: renderVisitorDetail(analytics, config),
-    healthChecked: escapeHtml(`Checked ${formatDate(health.checkedAt.slice(0, 10))}.`),
-    healthTiles: renderHealthTiles(healthTiles(health, month, search.indexing, checkedAt)),
+    searchDetail: search ? renderSearchDetail(search, config, month.period, period.monthName, month.sample) : "",
+    visitorDetail: analytics ? renderVisitorDetail(analytics, config, month.sample) : "",
+    detailHealth: search && analytics ? healthSection : "",
+    onePageSections:
+      search && analytics
+        ? ""
+        : `${healthSection}\n${renderOnePagePlans(nextMonthName, month.nextMonth, healthSection ? null : renderCareAreas(config.careAreas))}`,
+    // An illustrative report says so in the masthead and the page 2 band.
+    reportKind: month.sample ? "Sample website care report" : "Website care report",
     nextMonth: renderNextMonth(month.nextMonth),
     careAreas: renderCareAreas(config.careAreas),
     agencyWordmark: escapeHtml(config.agency.wordmark),
     agencyName: escapeHtml(config.agency.name),
     agencyDomain: escapeHtml(config.agency.domain),
     serviceName: escapeHtml(config.agency.serviceName),
-    nextReportDate: escapeHtml(formatDate(month.nextReport)),
   };
 
   const used: string[] = [];

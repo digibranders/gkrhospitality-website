@@ -36,15 +36,15 @@ Needs Node 23.6 or later (it runs the TypeScript directly) and Google Chrome. Se
 |---|---|---|
 | `period` | Reporting month, `YYYY-MM`. Must match the file name. | |
 | `issued` | Date the report is issued, `YYYY-MM-DD`. | Not before the reporting month |
-| `nextReport` | Date of the next report, `YYYY-MM-DD`. | After `issued` |
+| `nextReport` | Date of the next report, `YYYY-MM-DD`. Kept as a record; not printed. | After `issued` |
 | `headline` | The verdict at the top of the page. | 46 characters (2 lines) |
 | `headlineEmphasis` | The word in the headline set in copper, usually the status. | Must appear in `headline` |
 | `summary` | One or two sentences on what changed this month. | 140 characters, and must fit on 2 lines |
 | `figures` | Exactly 4 key numbers. `value` is the number, `unit` is optional (like `%`), `label` is 1 or 2 short lines. | 5 characters per value, 20 per label line |
 | `improvementsNote` | The short line under "What we improved in ...". | 110 characters |
-| `improvements` | 1 to 4 changes. `area` must be one of the six care areas in `config.json`. | Title 36 (1 line), body 84 characters (2 lines) |
+| `improvements` | 1 to 4 changes. `area` must be one of the six care areas in `config.json`. | Title 36 (1 line), body 80 characters (2 lines) |
 | `operations` | From Vercel: `deployments` (`succeeded`, `total`) this month, and `runtimeErrors` (`count` over the last `days`). Shown as site health tiles on page 2. | |
-| `attention` | 0 to 3 extra items for "Needs your attention", each a `title` and `detail`. The health check adds its own (see below), so this is usually `[]`. | Title 60, detail 140 characters |
+| `attention` | 0 to 3 extra items for "Needs your attention", each a `title` and `detail`. The health check adds its own (see below), so this is usually `[]`. The build stops if the two together come to more than 4. | Title 60, detail 140 characters |
 | `nextMonth` | 1 to 5 planned items for next month, shown as "Coming in ...". Confirm them with the client before sending. | 72 characters (1 line) each |
 | `heroImage` | Optional. A different masthead photo for this month, like `assets/new-photo.jpg`. | |
 
@@ -52,15 +52,14 @@ Needs Node 23.6 or later (it runs the TypeScript directly) and Google Chrome. Se
 
 `npm run report:search` asks Google Search Console for the month and saves:
 
-- **Impressions and clicks** for the whole month, with the change against the previous month ("Up 19% on July").
-- **Click rate and average position** for the month, and times shown on desktop and mobile.
-- **Times shown and clicks per day**, drawn as two daily charts.
+- **Seen in Google** (Search Console's "impressions", how often the site appeared in results) and **clicks** for the whole month, with the change against the previous month ("Up 19% on July").
+- **Click rate and average position** for the month, and times shown on desktop and mobile. A share that would round to 0% or 100% without being exactly that reads "under 1%" or "over 99%", here and in the visitor numbers.
 - **What people searched**, top 5 by times shown, with clicks and average position. Google leaves rare searches out for privacy, so the report says how many of the month's clicks the listed searches cover. Long searches are shortened in the middle ("hospitalit…new york") so similar ones stay distinguishable.
 - **Pages Google showed**, top 5. www and non-www addresses for the same page are counted together, and paths are shown by the names in `config.json` (`"/services": "Services"`). A page missing from that list shows as its path; add it to `pageNames` when the site gets a new page.
 
 It reads the `https://www.gkrhospitality.com/` property. Every other address (non-www, the old gkrhospitalityconsulting.com domains) redirects to www, so this is where all search traffic is recorded. The `sc-domain:gkrhospitality.com` Domain property also exists but was only added on 29 September 2026 and had not loaded its history yet; the www property had.
 
-Search Console only returns days it has finalised, about three days behind. To report on a month that is still running, add `--partial`: the report then shows the last finalised day it covers. If Search Console has no data yet (a brand new property), `--indexing-only` records indexing and marks the search numbers as pending.
+Search Console only returns days it has finalised, about three days behind. To report on a month that is still running, add `--partial`: the report then shows the last finalised day it covers, and the change is against the same days of the previous month (the 1st to the same day number, or that month's last day if it is shorter). If Search Console has no data yet (a brand new property), `--indexing-only` records indexing and marks the search numbers as pending.
 
 ## Visitor numbers
 
@@ -74,7 +73,7 @@ Search Console only returns days it has finalised, about three days behind. To r
 
 Each shows the change against the previous month. When GA4 has no earlier data (September 2026 was the first month tracked), Visitors says when tracking began and Search visits shows its share of all visits instead.
 
-To report on a month that is still running, add `--partial`: it covers the 1st to yesterday, and the report shows those exact dates. Run it again without the flag after the month ends to replace it with the full month.
+To report on a month that is still running, add `--partial`: it covers the 1st to yesterday (New York time, so the day has really ended at the property), the report shows those exact dates, and the change is against the same days of the previous month. Run it again without the flag after the month ends to replace it with the full month.
 
 **Enquiries are not reported yet.** As of 29 September 2026 the GA4 `generate_lead` event fires on every page view (a Tag Manager tag triggered on All Pages), so it counts visits, not contact form submissions. Once that is fixed, enquiries can be added.
 
@@ -84,11 +83,11 @@ To report on a month that is still running, add `--partial`: it covers the 1st t
 
 - **Security certificate**: the HTTPS certificate's expiry date and issuer.
 - **Domain renewal**: the registration expiry and registrar, from the public registry record (RDAP, found through IANA's list of registries).
-- **Pages responding**: every page in the sitemap, loaded one at a time.
+- **Pages responding**: every page in the sitemap at the address it lists, loaded one at a time. A page that times out or fails on DNS or TLS is recorded with status 0 and counts as not loading; the run carries on.
 - **Security headers**: which of six expected headers the homepage sends.
 - **Security alerts in code**: `pnpm audit` counts, and the Next.js and React versions in `package.json`. These describe the repository, which can be ahead of what is deployed.
 
-The health check raises items in "Needs your attention" by itself: a domain renewing within 90 days, a certificate expiring within 14 days, any page not loading, and any critical or high security alert. Its warning tiles are marked with a copper rule.
+The health check raises items in "Needs your attention" by itself: a domain renewing within 90 days, a certificate expiring within 14 days, any page not loading, and any critical or high security alert. Its warning tiles are marked with a copper rule. A certificate whose date has passed by the time of the check shows as "Expired", a month with no deployments shows "None", and the "Checked" date is the date in New York.
 
 ## Google access
 
@@ -104,12 +103,29 @@ Set up once on 29 September 2026. Nothing here needs doing again unless the key 
 
 To run the fetch on another computer, copy the key file there privately (never by email or chat), or create a new key: Google Cloud > IAM & Admin > Service Accounts > GKR care report > Keys > Add key > JSON. If a key might have leaked, delete it on that same page; the old file stops working at once.
 
+## Months before tracking began
+
+A month that says `"tracked": false` has no GA4 or Search Console data and builds as one page. If it also has no `.health.json` (nobody checked the site that month), it shows no site health section and lists the standing monthly checks instead, rather than printing readings nobody took. Such a month can list `healthRecords` instead: three, four, six or eight site health facts taken from records, each a `label`, `value` and `note`. They show as a Site health section headed "From the <month> records". August 2026 is built this way from its real work (commits on 26 August, live in deployment `e1ada0b`). Its records come from the certificate transparency log (certificate issued 19 July, expiring 17 October), the domain registry, Vercel (one production deployment on 26 August), `next.config.ts` at `e1ada0b` (no headers of its own, so only Vercel's HTTPS enforcement) and commit `95a97e7` (Sentry added, Next.js 16.1.6 to 16.3.3).
+
+## Sample reports (April to August 2026)
+
+Search Console and Google Analytics were set up in September 2026, so no visitor or search data exists for earlier months. `samples/` holds illustrative reports for April to August 2026: the maintenance work, key figures, site health readings and plans are illustrative, and there are no visitor or search numbers at all. The August sample keeps the copy of the original August report.
+
+```bash
+npm run report -- 2026-04 --sample
+```
+
+- **One page.** Each sample month says `"tracked": false`, so it has no `.search.json` or `.analytics.json` and builds as a single page: masthead, figures, improvements, site health and next month's plan. Site health shows average load time in place of Google indexing.
+- **Kept apart from real months.** Every file in `samples/` says `"sample": true`, and `--sample` refuses any month file that does not. A month in `months/` that says `"sample": true` is refused too.
+- **Labelled.** The masthead reads "Sample website care report", the site health line reads "Illustrative readings", and the file name ends in `-Sample`.
+- Output goes to `output/samples/<period>/`.
+
 ## House rules the build enforces
 
 - **No em-dashes or en-dashes** anywhere in the copy. Use a comma, colon or full stop.
 - **Only real numbers.** Figures come from what was measured this month. Leave a figure out rather than estimate it; if a month has fewer than four real numbers, change the figure (for example "Pages under monitoring") rather than invent one.
 - **Every improvement belongs to a care area,** so the client can see which part of the plan the work falls under.
-- **Data matches the month.** The build needs the month's `.search.json`, `.analytics.json` and `.health.json`, and checks the first two cover the same month as the report.
+- **Data matches the month.** The build needs the month's `.search.json`, `.analytics.json` and `.health.json`, and checks the first two cover the same month as the report. The health check must not be from before the month (just after it ends is normal), and its page counts must add up.
 - **Everything fits on two pages.** Before printing, the build loads the pages in Chrome and measures each one: headline lines, the gap above the figures panel, overflow at the bottom and right edge, and whether each footer is visible. It names the page that overflows. After printing it checks the PDF has exactly two pages.
 
 ## What stays the same every month
@@ -126,6 +142,7 @@ To run the fetch on another computer, copy the key file there privately (never b
 | `months/YYYY-MM.search.json` | The month's search numbers, written by `npm run report:search`. |
 | `months/YYYY-MM.analytics.json` | The month's GA4 numbers, written by `npm run report:analytics`. |
 | `months/YYYY-MM.health.json` | The live site and code readings, written by `npm run report:health`. |
+| `samples/` | Illustrative one-page April to August 2026 reports. See "Sample reports". |
 | `report.ts` | Validation, rendering and layout checks. Pure functions, covered by `report.test.ts`. |
 | `search-console.ts` | Search Console and URL Inspection response handling. Pure, covered by `search-console.test.ts`. |
 | `analytics.ts` | GA4 Data API response handling. Pure, covered by `analytics.test.ts`. |
@@ -133,7 +150,7 @@ To run the fetch on another computer, copy the key file there privately (never b
 | `charts.ts` | The daily column charts (SVG) and bar lists (HTML). Pure, covered by `charts.test.ts`. |
 | `periods.ts` | Reporting months and date ranges. Pure, covered by `periods.test.ts`. |
 | `google-auth.ts` | Service account sign-in (read-only scopes). Pure, covered by `google-auth.test.ts`. |
-| `google-client.ts` | Reads the key and exchanges it for an access token. |
+| `google-client.ts` | Reads the key and exchanges it for an access token, and reads Google's responses. Covered by `google-client.test.ts`. |
 | `fetch-search.ts` | The search command: calls the Search Console API. |
 | `fetch-analytics.ts` | The visitors command: calls the GA4 Data API. |
 | `fetch-health.ts` | The health command: certificate, registry record, pages, headers, `pnpm audit`. |
@@ -147,7 +164,7 @@ To run the fetch on another computer, copy the key file there privately (never b
 - **Bands carry meaning.** Navy is the verdict (page 1) and the header band (page 2), white is this month, stone is what comes next and the standing monthly care.
 - **One grid.** Every section has a title column on the left and two content columns on the right, on both pages, so the eye reads down a single grid. Numbers from 100,000 up use the short form ("128.5K") so they always fit.
 - **Charts.** One series each, in chart copper `#B07A55` (3:1 on white). Bars are at most 24px thick with a rounded top and a 2px gap; only the peak day is labelled. Text is never set in the chart colour. There are no two-axis charts: times shown and clicks are two separate charts.
-- **Type scale.** Figtree throughout. Nothing prints below 10.5px, and the lowest text contrast is 5.7:1. Numbers carry more weight than their labels: key figures 400, glance stats 500, and 600 for health tiles, bar values, the facts beside each section and the clicks column in the tables. Labels and notes are 400 in muted grey.
+- **Type scale.** Figtree throughout. Nothing prints below 11px, and the lowest text contrast is 5.7:1. Section titles (19px), improvement titles (14px) and the masthead summary (14px) are sized to fit their lines; the layout probe fails the build if the summary runs into the figures. Numbers carry more weight than their labels: key figures and glance stats 500, and 600 for health tiles, bar values, the facts beside each section and the clicks column in the tables. Labels and notes are 400 in muted grey.
 - **No blurred CSS effects.** Chrome turns `box-shadow` blur, `filter: blur()` and `backdrop-filter` into a greyscale image with a transparency mask when printing. macOS Preview, Mail and iOS Files ignore the mask and show a solid grey block. The figures panel shadow is a pre-rendered PNG (`assets/panel-shadow.png`) for this reason. It is sized for the 704 x 112px panel with 4 figures; if the panel changes shape, regenerate the PNG to match.
 - **Text over the photo.** The report label, domain and issue date sit on the masthead photo, with a dark corner fade behind them (at least 5.5:1 contrast over the current photo). If you swap in a brighter photo, check that the text still reads clearly (at least 4.5:1).
 - **Fonts are local.** Figtree is self-hosted in `assets/` so the build never depends on Google Fonts being reachable. Figtree is licensed under the SIL Open Font License.

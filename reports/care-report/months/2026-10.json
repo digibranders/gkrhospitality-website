@@ -1,0 +1,79 @@
+{
+  "period": "2026-10",
+  "issued": "2026-11-02",
+  "nextReport": "2026-12-04",
+  "headline": "Search is growing and security is stronger.",
+  "headlineEmphasis": "growing",
+  "summary": "Google clicks rose 25% in October. After a review we updated Next.js, clearing two critical alerts, and fixed 21 site issues.",
+  "figures": [
+    {
+      "value": "25",
+      "unit": "%",
+      "label": [
+        "More clicks",
+        "from Google"
+      ]
+    },
+    {
+      "value": "2",
+      "label": [
+        "Critical alerts",
+        "cleared"
+      ]
+    },
+    {
+      "value": "21",
+      "label": [
+        "Site issues",
+        "fixed"
+      ]
+    },
+    {
+      "value": "10",
+      "label": [
+        "Pages loading",
+        "and indexed"
+      ]
+    }
+  ],
+  "improvementsNote": "Fixes from the October review, finished on 2 November.",
+  "improvements": [
+    {
+      "area": "Security",
+      "title": "Critical security alerts cleared",
+      "body": "Next.js and other packages were updated, clearing 2 critical and 8 high alerts."
+    },
+    {
+      "area": "Website health",
+      "title": "Easier for every visitor to use",
+      "body": "Menu, forms, gallery and slideshows now work with a keyboard and screen readers."
+    },
+    {
+      "area": "Security",
+      "title": "Contact form protected",
+      "body": "Repeat sends are now limited, and any failure is reported to us."
+    },
+    {
+      "area": "Website health",
+      "title": "Page details corrected",
+      "body": "Titles, gallery captions, image descriptions and search data were corrected."
+    }
+  ],
+  "operations": {
+    "deployments": {
+      "succeeded": 0,
+      "total": 0
+    },
+    "runtimeErrors": {
+      "count": 7,
+      "days": 7
+    }
+  },
+  "attention": [],
+  "nextMonth": [
+    "Switch the Google Analytics enquiry tag to the new form event",
+    "Strengthen the keyboard focus outline on light sections",
+    "Check the home page process images are in the right order",
+    "Keep Next.js and other packages on their latest security releases"
+  ]
+}

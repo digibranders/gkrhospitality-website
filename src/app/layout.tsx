@@ -98,7 +98,7 @@ export default function RootLayout({
         <ScrollToTop />
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 bg-[#c5a059] text-[#181818] px-6 py-3 font-bold rounded-sm shadow-lg border-2 border-white/20 outline-none"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[60] bg-[#c5a059] text-[#181818] px-6 py-3 font-bold rounded-sm shadow-lg border-2 border-white/20 outline-none"
         >
           Skip to Content
         </a>

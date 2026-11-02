@@ -10,6 +10,7 @@ interface Testimonial {
   highlight?: string;
   name: string;
   author: string;
+  company: string;
   logo: StaticImageData;
   invertLogo?: boolean;
 }
@@ -129,21 +130,21 @@ export default function TestimonialsSection({ testimonials }: TestimonialsSectio
 
         <div className="max-w-7xl mx-auto relative min-h-[700px] sm:min-h-[750px] md:min-h-[800px] flex flex-col md:flex-row items-start md:items-center justify-center pt-8 md:pt-0">
 
-          {/* Circular Navigation Buttons - Aligned with Card */}
-          <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 z-[60] pointer-events-none hidden md:flex items-center justify-between px-2 md:-px-12 w-full">
+          {/* Circular Navigation Buttons - Below the card on mobile, where they would cover the quote, aligned with it from md */}
+          <div className="relative order-last md:order-none mt-6 md:mt-0 md:absolute md:inset-x-0 md:top-1/2 md:-translate-y-1/2 z-[60] pointer-events-none flex items-center justify-center gap-6 md:justify-between px-2 w-full">
             <button
               onClick={prevTestimonial}
-              className="w-12 h-12 md:w-14 md:h-14 rounded-full border border-white/10 bg-white/5 backdrop-blur-md flex items-center justify-center text-white hover:bg-[#c5a059] hover:border-[#c5a059] transition-all duration-300 pointer-events-auto group focus:outline-none focus-visible:ring-1 focus-visible:ring-[#c5a059] cursor-pointer"
+              className="w-12 h-12 md:w-14 md:h-14 rounded-full border border-white/10 bg-white/5 backdrop-blur-md flex items-center justify-center text-white hover:bg-[#c5a059] hover:border-[#c5a059] hover:text-[#181818] transition-all duration-300 pointer-events-auto group focus:outline-none focus-visible:ring-1 focus-visible:ring-[#c5a059] cursor-pointer"
               aria-label="Previous testimonial"
             >
-              <ChevronLeft className="w-5 h-5 md:w-6 md:h-6 transition-transform group-hover:-translate-x-1" />
+              <ChevronLeft className="w-5 h-5 md:w-6 md:h-6 transition-transform group-hover:-translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0" />
             </button>
             <button
               onClick={nextTestimonial}
-              className="w-12 h-12 md:w-14 md:h-14 rounded-full border border-white/10 bg-white/5 backdrop-blur-md flex items-center justify-center text-white hover:bg-[#c5a059] hover:border-[#c5a059] transition-all duration-300 pointer-events-auto group focus:outline-none focus-visible:ring-1 focus-visible:ring-[#c5a059] cursor-pointer"
+              className="w-12 h-12 md:w-14 md:h-14 rounded-full border border-white/10 bg-white/5 backdrop-blur-md flex items-center justify-center text-white hover:bg-[#c5a059] hover:border-[#c5a059] hover:text-[#181818] transition-all duration-300 pointer-events-auto group focus:outline-none focus-visible:ring-1 focus-visible:ring-[#c5a059] cursor-pointer"
               aria-label="Next testimonial"
             >
-              <ChevronRight className="w-5 h-5 md:w-6 md:h-6 transition-transform group-hover:translate-x-1" />
+              <ChevronRight className="w-5 h-5 md:w-6 md:h-6 transition-transform group-hover:translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0" />
             </button>
           </div>
 
@@ -186,7 +187,7 @@ export default function TestimonialsSection({ testimonials }: TestimonialsSectio
                     <div className="mb-6 md:mb-10 relative h-12 md:h-20 w-32 md:w-56 mx-auto">
                       <Image
                         src={testimonial.logo}
-                        alt=""
+                        alt={testimonial.company}
                         fill
                         className={`object-contain ${testimonial.invertLogo ? 'brightness-0 invert' : ''}`}
                       />

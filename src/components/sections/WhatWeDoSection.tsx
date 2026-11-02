@@ -48,22 +48,12 @@ export default function WhatWeDoSection({ services }: WhatWeDoSectionProps) {
 
 function ServiceCard({ service, index, total }: { service: Service; index: number; total: number }) {
     const [isActive, setIsActive] = useState(false);
+    const listId = `${service.anchor}-services`;
 
     return (
         <div
             id={service.anchor}
-            role="button"
-            tabIndex={0}
-            aria-expanded={isActive}
-            aria-label={`View services for ${service.title}`}
-            className={`relative w-full h-[500px] scroll-mt-32 overflow-hidden group shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c5a059] focus-visible:ring-offset-2 focus-visible:ring-offset-white ${index === total - 1 ? 'lg:col-start-2' : ''}`}
-            onClick={() => setIsActive(!isActive)}
-            onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setIsActive(!isActive);
-                }
-            }}
+            className={`relative w-full h-[500px] scroll-mt-32 overflow-hidden group shadow-xl has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[#8a6d3b] has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-white ${index === total - 1 ? 'lg:col-start-2' : ''}`}
             onMouseLeave={() => setIsActive(false)}
         >
             {/* Image Background */}
@@ -72,24 +62,37 @@ function ServiceCard({ service, index, total }: { service: Service; index: numbe
                     src={service.bgImage}
                     alt="" /* Decorative background */
                     fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-110"
+                    className="object-cover transition-transform duration-700 group-hover:scale-110 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
                 <div className={`absolute inset-0 bg-gradient-to-t from-[#181818] via-[#181818]/60 to-transparent opacity-90 transition-opacity duration-300 ${isActive ? 'opacity-0' : 'group-hover:opacity-0'}`}></div>
             </div>
 
             {/* Initial Content (Title) */}
-            <div className={`absolute bottom-0 left-0 w-full p-8 transition-all duration-500 transform z-10 ${isActive ? 'translate-y-[20px] opacity-0' : 'group-hover:translate-y-[20px] group-hover:opacity-0'}`}>
+            <div className={`absolute bottom-0 left-0 w-full p-8 transition-all duration-500 transform motion-reduce:transition-none z-10 ${isActive ? 'translate-y-[20px] opacity-0' : 'group-hover:translate-y-[20px] group-hover:opacity-0'}`}>
                 <h3 className="text-3xl font-serif text-white mb-2">
                     {service.title}
                 </h3>
-                <span className="text-[#d4b06b] text-[0.875rem] uppercase tracking-widest font-bold inline-flex items-center gap-2">
+                <span aria-hidden="true" className="text-[#d4b06b] text-[0.875rem] uppercase tracking-widest font-bold inline-flex items-center gap-2">
                     View Services <span className="text-lg">&uarr;</span>
                 </span>
             </div>
 
+            {/* Covers the card, so a click anywhere toggles the list as it always has. */}
+            <button
+                type="button"
+                aria-expanded={isActive}
+                aria-controls={listId}
+                aria-label={`View services for ${service.title}`}
+                className="absolute inset-0 z-30 w-full h-full focus:outline-none"
+                onClick={() => setIsActive(!isActive)}
+            />
+
             {/* Slide-Up Content (Gold Background) */}
-            <div className={`absolute inset-0 bg-[#c5a059] p-6 flex flex-col justify-center transition-transform duration-500 z-20 ${isActive ? 'translate-y-0' : 'translate-y-full group-hover:translate-y-0'}`}>
+            <div
+                id={listId}
+                className={`absolute inset-0 bg-[#c5a059] p-6 flex flex-col justify-center transition-[translate,visibility] duration-500 motion-reduce:transition-none z-20 ${isActive ? 'translate-y-0' : 'invisible translate-y-full group-hover:visible group-hover:translate-y-0'}`}
+            >
                 <ul className="space-y-1.5 w-full">
                     {service.descriptionList?.map((item, i) => (
                         <li key={i} className="text-[#181818] text-[0.875rem] leading-snug border-b border-[#181818]/10 pb-1 last:border-0 last:pb-0 font-medium">

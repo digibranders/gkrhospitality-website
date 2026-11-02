@@ -19,6 +19,7 @@ import {
   certificateDate,
   headerFindings,
   rdapDomain,
+  readPage,
   summarisePages,
 } from "./health.ts";
 import type { HealthReport } from "./health.ts";
@@ -29,6 +30,8 @@ const ROOT = fileURLToPath(new URL(".", import.meta.url));
 const REPO = join(ROOT, "..", "..");
 const PERIOD = /^\d{4}-\d{2}$/;
 const TIMEOUT_MS = 20_000;
+const AUDIT_TIMEOUT_MS = 120_000;
+const AUDIT_MAX_BUFFER = 64 * 1024 * 1024;
 
 function certificate(host: string): Promise<HealthReport["tls"]> {
   return new Promise((resolve, reject) => {
@@ -47,15 +50,16 @@ function certificate(host: string): Promise<HealthReport["tls"]> {
   });
 }
 
-async function checkPage(origin: string, path: string): Promise<{ path: string; status: number; ms: number }> {
-  const started = performance.now();
-  const response = await fetch(path === "/" ? origin : `${origin}${path}`, {
-    redirect: "manual",
-    signal: AbortSignal.timeout(TIMEOUT_MS),
-    headers: { "user-agent": "FynixCareReport/1.0 (+https://fynix.digital)" },
+function checkPage(origin: string, path: string): Promise<{ path: string; status: number; ms: number }> {
+  return readPage(path, async () => {
+    const response = await fetch(path === "/" ? origin : `${origin}${path}`, {
+      redirect: "manual",
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      headers: { "user-agent": "FynixCareReport/1.0 (+https://fynix.digital)" },
+    });
+    await response.arrayBuffer();
+    return response.status;
   });
-  await response.arrayBuffer();
-  return { path, status: response.status, ms: Math.round(performance.now() - started) };
 }
 
 /**
@@ -81,9 +85,18 @@ async function registryRecord(domain: string): Promise<unknown> {
 function audit(): HealthReport["audit"] {
   let stdout: string;
   try {
-    stdout = execFileSync("pnpm", ["audit", "--json"], { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    stdout = execFileSync("pnpm", ["audit", "--json"], {
+      cwd: REPO,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      timeout: AUDIT_TIMEOUT_MS,
+      maxBuffer: AUDIT_MAX_BUFFER,
+    });
   } catch (error) {
-    stdout = String((error as { stdout?: unknown }).stdout ?? "");
+    const failure = error as { code?: unknown; stdout?: unknown };
+    // Unlike a non-zero exit, these two leave cut-off JSON behind.
+    if (failure.code === "ETIMEDOUT" || failure.code === "ENOBUFS") throw new HealthError(`pnpm audit did not finish (${failure.code}).`);
+    stdout = String(failure.stdout ?? "");
   }
   if (!stdout.trim()) throw new HealthError("pnpm audit produced no output. Is pnpm installed?");
   return auditCounts(JSON.parse(stdout));

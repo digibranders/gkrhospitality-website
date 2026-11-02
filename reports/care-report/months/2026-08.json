@@ -1,15 +1,41 @@
 {
   "period": "2026-08",
+  "tracked": false,
   "issued": "2026-08-28",
   "nextReport": "2026-09-26",
   "headline": "Your website is healthy and fully cared for.",
   "headlineEmphasis": "healthy",
   "summary": "In August we added live error monitoring, fixed the footer contact button and cleaned up the codebase. Every change is live and verified.",
   "figures": [
-    { "value": "100", "unit": "%", "label": ["Deployments", "succeeded"] },
-    { "value": "2", "label": ["Security gaps", "closed"] },
-    { "value": "32", "label": ["Code issues", "fixed"] },
-    { "value": "10", "label": ["Pages under", "monitoring"] }
+    {
+      "value": "100",
+      "unit": "%",
+      "label": [
+        "Deployments",
+        "succeeded"
+      ]
+    },
+    {
+      "value": "2",
+      "label": [
+        "Security gaps",
+        "closed"
+      ]
+    },
+    {
+      "value": "52",
+      "label": [
+        "Code issues",
+        "fixed"
+      ]
+    },
+    {
+      "value": "10",
+      "label": [
+        "Pages under",
+        "monitoring"
+      ]
+    }
   ],
   "improvementsNote": "Four changes shipped this month, each one tied to an area of ongoing care.",
   "improvements": [
@@ -32,6 +58,43 @@
       "area": "Code quality",
       "title": "Every fix deployed and verified",
       "body": "All fixes are now live on the site and verified in production."
+    }
+  ],
+  "nextMonth": [
+    "Full review of the site's code, security and Google setup",
+    "Set up Google Analytics and Search Console reporting",
+    "Update the website's packages and frameworks"
+  ],
+  "healthRecords": [
+    {
+      "label": "Security certificate",
+      "value": "Valid",
+      "note": "Until 17 Oct 2026"
+    },
+    {
+      "label": "Domain renews",
+      "value": "5 Dec 2026",
+      "note": "With GoDaddy"
+    },
+    {
+      "label": "Deployments",
+      "value": "1 of 1",
+      "note": "Live on 26 August"
+    },
+    {
+      "label": "Security headers",
+      "value": "1 of 6",
+      "note": "5 still to add"
+    },
+    {
+      "label": "Error monitoring",
+      "value": "Live",
+      "note": "Since 26 August"
+    },
+    {
+      "label": "Next.js",
+      "value": "16.3.3",
+      "note": "Updated from 16.1.6"
     }
   ]
 }

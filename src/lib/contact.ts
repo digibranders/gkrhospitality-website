@@ -54,6 +54,11 @@ const PHONE = /^[0-9+().\-\s]*$/;
 const LINE_BREAK = /[\r\n]/;
 // Names and companies are repeated in the auto-reply, so they must not carry links.
 const LINK = /(https?:|www\.|:\/\/)/i;
+// A dotted word with a path ("bit.ly/x") is always a link. Without a path, "J.Smith" looks
+// like a domain to a pattern, so bare domains only match these TLDs.
+// shortcut: spam on an unlisted TLD with no path still gets through, add the TLD if it shows up.
+const BARE_DOMAIN =
+  /\b[a-z0-9-]+\.(?:[a-z]{2,}\/|(?:com|net|org|info|biz|io|co|ly|me|gd|gl|to|cc|tv|ws|xyz|top|site|online|club|shop|store|app|dev|link|click|live|ru|cn|uk|de|fr|nl|in)\b)/i;
 
 function text(input: Record<string, unknown>, field: ContactField): string | undefined {
   const value = input[field] ?? '';
@@ -84,7 +89,9 @@ export function validateContactSubmission(input: unknown): ContactValidation {
     values;
 
   if (!name) return fail('name', 'Name is required.');
-  if (LINE_BREAK.test(name) || LINK.test(name)) return fail('name', 'Please enter just your name.');
+  if (LINE_BREAK.test(name) || LINK.test(name) || BARE_DOMAIN.test(name)) {
+    return fail('name', 'Please enter just your name.');
+  }
   if (!email || !EMAIL.test(email)) return fail('email', 'Please enter a valid email address.');
   if (!PHONE.test(phone)) return fail('phone', 'Please use digits and + ( ) - only.');
   if (LINE_BREAK.test(company) || LINK.test(company)) return fail('company', 'Please enter just the company name.');

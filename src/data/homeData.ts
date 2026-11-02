@@ -41,16 +41,38 @@ import beverlyHiltonLogo from '@/assets/images/logos/beverly-hilton.png';
 
 // Hero Slideshow Images - NYC, LA, Caribbean
 export const HERO_IMAGES = [
-
-  hero4,
-  hero3,
-  heroNyc4,
-  heroLa1,
-  heroNyc1,
-  heroLa2,
-  heroCaribbean2,
-  heroNyc2
-
+  {
+    src: hero4,
+    alt: "Stone castle hotel at dusk with lit windows, vintage cars on the driveway and clipped hedges on the lawn"
+  },
+  {
+    src: hero3,
+    alt: "Rooftop terrace at sunset with a long reflecting pool, a wire head sculpture, a glass-walled fire pit and dining tables"
+  },
+  {
+    src: heroNyc4,
+    alt: "Black and white photo of two waiters in tuxedos serving two seated men at a table on a steel beam high above New York"
+  },
+  {
+    src: heroLa1,
+    alt: "Tall palm trees in front of the downtown Los Angeles skyline under a clear sky"
+  },
+  {
+    src: heroNyc1,
+    alt: "Aerial view of Manhattan office towers at dusk, with the Empire State Building against an orange horizon"
+  },
+  {
+    src: heroLa2,
+    alt: "Poolside breakfast table with pastries, fruit, juice and coffee, with white lounge chairs and a pool behind it"
+  },
+  {
+    src: heroCaribbean2,
+    alt: "Curved sand beach with leaning palm trees at sunset, under an orange sky over calm water"
+  },
+  {
+    src: heroNyc2,
+    alt: "Aerial view of Midtown Manhattan at twilight, with the Empire State Building at the center under a purple and pink sky"
+  }
 ];
 
 // Services with background images
@@ -160,7 +182,7 @@ export const HOW_WE_WORK = [
   {
     number: "01",
     title: "Initial Briefing",
-    description: "We take the necessary time understanding our client’s needs, starting with core objectives, opportunities and challenges. Then, working colaboratively with you  to agree best approach and actionable next steps.",
+    description: "We take the necessary time understanding our client’s needs, starting with core objectives, opportunities and challenges. Then, working collaboratively with you  to agree best approach and actionable next steps.",
     image: initialBriefingImg
   },
   {
@@ -224,6 +246,7 @@ export const TESTIMONIALS = [
     highlight: "consistently delivered exceptional results",
     name: "Nick Hoare",
     author: "Former Managing Director",
+    company: "etc.venues",
     logo: etcVenuesLogo
   },
   {
@@ -231,14 +254,16 @@ export const TESTIMONIALS = [
     highlight: "instrumental in the creation and opening",
     name: "Sven Koch",
     author: "CEO",
+    company: "Azumi",
     logo: azumiLogo,
     invertLogo: true
   },
   {
     quote: "Having worked with Garrett for over a decade, I have consistently been impressed by his expertise and command of the hospitality industry. He combines sharp financial acumen with deep experience across operations, development, start-up buildouts, C-suite leadership, M&A activity, and end-to-end project management — always with a meticulous, detail-oriented approach. As a business owner, I genuinely value Garrett’s perspective; he brings clarity, structure, and strategic insight to every challenge. He is someone I trust to deliver and a talent I would welcome as part of any company’s senior leadership and strategic planning team.",
-    highlight: "stayed until it was fixed",
+    highlight: "clarity, structure, and strategic insight",
     name: "Nish Patel",
     author: "Group CEO",
+    company: "Paperchase Accountancy",
     logo: paperchaseLogo
   },
   {
@@ -246,6 +271,7 @@ export const TESTIMONIALS = [
     highlight: "transforming our food, beverage, and banquet operations",
     name: "Denny Fitzpatrick",
     author: "Former General Manager",
+    company: "The Beverly Hilton",
     logo: beverlyHiltonLogo
   }
 ];

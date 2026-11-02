@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-09-29T10:24:21.968Z",
+  "checkedAt": "2026-09-29T10:53:40.880Z",
   "site": "https://www.gkrhospitality.com",
   "tls": {
     "validTo": "2026-12-19",
@@ -13,24 +13,23 @@
   "pages": {
     "checked": 10,
     "ok": 10,
-    "averageMs": 442,
+    "averageMs": 413,
     "slowest": {
-      "path": "/how-we-work",
-      "ms": 508
+      "path": "/reviews",
+      "ms": 631
     },
     "failing": []
   },
   "headers": {
     "present": [
       "HTTPS enforced (HSTS)",
+      "Content security policy",
       "Frame protection",
       "File type protection",
       "Referrer policy",
       "Permissions policy"
     ],
-    "missing": [
-      "Content security policy"
-    ]
+    "missing": []
   },
   "audit": {
     "critical": 0,

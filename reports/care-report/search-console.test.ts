@@ -82,14 +82,16 @@ describe("Search Console responses", () => {
 });
 
 describe("indexing", () => {
-  it("reads page paths from the live sitemap, skipping other hosts", () => {
+  it("reads page addresses from the live sitemap as listed, skipping other hosts", () => {
     const xml = `<?xml version="1.0"?><urlset>
       <url><loc>https://www.gkrhospitality.com</loc></url>
       <url><loc>https://www.gkrhospitality.com/about</loc></url>
       <url><loc>https://www.gkrhospitality.com/work/</loc></url>
+      <url><loc>https://www.gkrhospitality.com/search?page=2</loc></url>
+      <url><loc>https://www.gkrhospitality.com/about</loc></url>
       <url><loc>https://evil.example.com/x</loc></url>
     </urlset>`;
-    expect(sitemapPaths(xml, "www.gkrhospitality.com")).toEqual(["/", "/about", "/work"]);
+    expect(sitemapPaths(xml, "www.gkrhospitality.com")).toEqual(["/", "/about", "/work/", "/search?page=2"]);
   });
 
   it("counts pages Google reports as indexed and names the ones it does not", () => {

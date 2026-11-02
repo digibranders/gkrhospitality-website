@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
@@ -13,6 +13,8 @@ export default function Navbar() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const handleNavClick = (e: React.MouseEvent, href: string) => {
     // Check if it's a hash link pointing to the current page
@@ -44,6 +46,41 @@ export default function Navbar() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // While the mobile menu is open: focus moves into it, the page behind stops
+  // scrolling, Escape closes it, and focus returns to the button afterwards.
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const menuButton = menuButtonRef.current;
+    menuRef.current?.querySelector<HTMLElement>('button, a')?.focus();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMobileMenuOpen(false);
+        return;
+      }
+      if (e.key !== 'Tab' || !menuRef.current) return;
+      const focusable = menuRef.current.querySelectorAll<HTMLElement>('button, a');
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last?.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first?.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      menuButton?.focus();
+    };
+  }, [mobileMenuOpen]);
 
   const NAV_ITEMS = [
     { label: 'About Us', href: '/about' },
@@ -97,6 +134,9 @@ export default function Navbar() {
             className="xl:hidden text-white hover:text-[#c5a059] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-[#c5a059] rounded-md p-1"
             onClick={() => setMobileMenuOpen(true)}
             aria-label="Open main menu"
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-menu"
+            ref={menuButtonRef}
           >
             <Menu size={28} strokeWidth={1} />
           </button>
@@ -111,6 +151,11 @@ export default function Navbar() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-[#181818] flex flex-col justify-center items-center"
+            id="mobile-menu"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Main menu"
+            ref={menuRef}
           >
             <button
               className="absolute top-8 right-6 text-white hover:text-[#c5a059] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-[#c5a059] rounded-full p-2"

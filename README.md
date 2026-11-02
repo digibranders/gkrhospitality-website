@@ -79,6 +79,17 @@ To run the production build locally:
 npm start
 ```
 
+## Deploying
+
+The site is hosted on Vercel (project `gkrhospitality-website`, team "Digibranders' projects"), connected to this repository through the Vercel GitHub App.
+
+- Work happens on `development`. Every push there builds a Preview deployment.
+- Merging a pull request into `main` deploys to production at www.gkrhospitality.com.
+
+Vercel only builds commits whose author email matches the GitHub account of a Vercel team member. Commit with the email verified on your GitHub account (`git config user.email`), and ask the team owner to add you to the Vercel team if you are not in it.
+
+If pushes stop producing deployments, check Vercel > Settings > Git. From March to September 2026 the connection showed as connected but received no pushes; disconnecting and reconnecting the repository fixed it.
+
 ## 📂 Project Structure
 
 ```

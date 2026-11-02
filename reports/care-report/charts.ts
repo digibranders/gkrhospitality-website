@@ -68,7 +68,7 @@ export function dailyColumns(
 
   const bars = days
     .map((d, i) => {
-      const h = max > 0 ? (d.value / max) * plot : 0;
+      const h = d.value > 0 ? Math.max(1, (d.value / max) * plot) : 0;
       const x = i * slot + (slot - bar) / 2;
       return barPath(Number(round1(x)), Number(round1(top + plot - h)), Number(round1(bar)), Number(round1(h)));
     })
@@ -77,7 +77,7 @@ export function dailyColumns(
     .join("");
 
   const text = (x: number, y: number, anchor: string, content: string, weight = 400): string =>
-    `<text x="${round1(x)}" y="${round1(y)}" text-anchor="${anchor}" font-size="10.5" font-weight="${weight}" fill="${LABEL}">${escapeXml(content)}</text>`;
+    `<text x="${round1(x)}" y="${round1(y)}" text-anchor="${anchor}" font-size="11" font-weight="${weight}" fill="${LABEL}">${escapeXml(content)}</text>`;
 
   let peak = "";
   if (peakIndex >= 0) {

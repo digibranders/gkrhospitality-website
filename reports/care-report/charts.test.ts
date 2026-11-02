@@ -48,6 +48,19 @@ describe("charts", () => {
     expect(svg).toContain("<line");
   });
 
+  it("keeps a non-zero bar at least 1px tall when the peak is far larger", () => {
+    const days = [
+      { date: "2026-09-01", value: 1 },
+      { date: "2026-09-02", value: 100_000 },
+      { date: "2026-09-03", value: 0 },
+    ];
+    const svg = dailyColumns(days, { width: 100, height: 60, title: "Visits" });
+    const paths = [...svg.matchAll(/<path d="M[\d.]+,([\d.]+)V[\d.]+Q[\d.]+,([\d.]+) /g)];
+    expect(paths).toHaveLength(2);
+    const [base, top] = paths[0].slice(1).map(Number);
+    expect(base - top).toBe(1);
+  });
+
   it("sizes list bars against the largest value and escapes labels", () => {
     const html = barList(
       [

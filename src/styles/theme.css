@@ -35,3 +35,13 @@
     border-radius: 2px;
   }
 }
+
+/* Loops from the second of the three logo sets to the first, so the join is invisible. */
+@keyframes logo-marquee {
+  from {
+    transform: translateX(-33.33%);
+  }
+  to {
+    transform: translateX(0%);
+  }
+}

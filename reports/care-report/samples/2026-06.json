@@ -1,0 +1,79 @@
+{
+  "period": "2026-06",
+  "sample": true,
+  "tracked": false,
+  "issued": "2026-07-06",
+  "nextReport": "2026-08-04",
+  "headline": "Your website is healthy and easier to find.",
+  "headlineEmphasis": "healthy",
+  "summary": "In June we rewrote nine page titles for search, fixed the reviews layout on phones and removed two old hosting accounts.",
+  "figures": [
+    {
+      "value": "9",
+      "label": [
+        "Page titles",
+        "rewritten"
+      ]
+    },
+    {
+      "value": "2",
+      "label": [
+        "Old accounts",
+        "removed"
+      ]
+    },
+    {
+      "value": "1",
+      "label": [
+        "Layout issue",
+        "fixed"
+      ]
+    },
+    {
+      "value": "2",
+      "label": [
+        "Deployments",
+        "shipped"
+      ]
+    }
+  ],
+  "improvementsNote": "The main changes this month, each tied to an area of ongoing care.",
+  "improvements": [
+    {
+      "area": "Website health",
+      "title": "Page titles rewritten for search",
+      "body": "Nine pages have clearer titles and descriptions in Google results."
+    },
+    {
+      "area": "Website health",
+      "title": "Reviews fit on small screens",
+      "body": "Long reviews ran off the edge on phones. They now wrap neatly."
+    },
+    {
+      "area": "Security",
+      "title": "Old hosting accounts removed",
+      "body": "Two accounts that no longer needed access to the hosting were removed."
+    },
+    {
+      "area": "Backups & history",
+      "title": "Monthly backup verified",
+      "body": "This month's backup was restored on a test copy and checked page by page."
+    }
+  ],
+  "nextMonth": [
+    "Apply this month's security patches",
+    "Check the contact form reaches both inboxes",
+    "Speed up the contact page"
+  ],
+  "operations": {
+    "deployments": {
+      "succeeded": 2,
+      "total": 2
+    },
+    "runtimeErrors": {
+      "count": 0,
+      "days": 7
+    }
+  },
+  "attention": []
+}

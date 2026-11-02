@@ -7,7 +7,8 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/api/'],
+        // Email signature pages. Only the HTML: signatures hotlink /sign/*.png, and * also covers /sign/final/.
+        disallow: ['/api/', '/sign/*.html'],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,

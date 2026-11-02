@@ -27,7 +27,7 @@ export default function Footer() {
 
           {/* Office */}
           <div className="md:col-span-3 md:col-start-7">
-            <h4 className="text-white font-serif text-xl mb-6">Office</h4>
+            <h3 className="text-white font-serif text-xl mb-6">Office</h3>
             <address className="text-stone-300 text-[0.75rem] leading-relaxed not-italic">
               450 Park Avenue South, (Floor 1)<br />
               New York, NY 10016<br />
@@ -42,7 +42,7 @@ export default function Footer() {
 
           {/* Connect */}
           <div className="md:col-span-3">
-            <h4 className="text-white font-serif text-xl mb-6">Connect</h4>
+            <h3 className="text-white font-serif text-xl mb-6">Connect</h3>
             <div className="flex flex-col gap-4">
               <a href="https://www.linkedin.com/in/garrettronan/" target="_blank" rel="noopener noreferrer" className="text-stone-300 hover:text-[#d4b06b] text-[0.75rem] uppercase tracking-widest transition-colors" aria-label="Visit our LinkedIn profile">LinkedIn</a>
               <a href="https://x.com/gkronan" target="_blank" rel="noopener noreferrer" className="text-stone-300 hover:text-[#d4b06b] text-[0.75rem] uppercase tracking-widest transition-colors" aria-label="Follow us on X">X</a>

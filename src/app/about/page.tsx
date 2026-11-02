@@ -145,9 +145,9 @@ export default function About() {
               >
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-8 items-baseline">
                   <div className="md:col-span-5">
-                    <h4 className="text-xl md:text-2xl font-serif text-white group-hover:text-[#c5a059] transition-colors">
+                    <h3 className="text-xl md:text-2xl font-serif text-white group-hover:text-[#c5a059] transition-colors">
                       {exp.role}
-                    </h4>
+                    </h3>
                     <p className="text-[#c5a059] text-sm uppercase tracking-wider mt-1">{exp.company}</p>
                   </div>
                   <div className="md:col-span-7">
@@ -160,13 +160,13 @@ export default function About() {
 
           <div className="mt-16 pt-16 border-t border-white/10 grid grid-cols-1 md:grid-cols-3 gap-12">
             <div>
-              <h4 className="text-white font-serif text-xl mb-4">Education & Background</h4>
+              <h3 className="text-white font-serif text-xl mb-4">Education & Background</h3>
               <p className="text-stone-400 leading-relaxed">
                 Honors Graduate of Shannon College of Hotel Management. Career started in Switzerland and UK before moving to New York in 1998.
               </p>
             </div>
             <div>
-              <h4 className="text-white font-serif text-xl mb-4">Industry Involvement</h4>
+              <h3 className="text-white font-serif text-xl mb-4">Industry Involvement</h3>
               <p className="text-stone-400 leading-relaxed">
                 Active member of HSMAI.
               </p>
@@ -178,7 +178,7 @@ export default function About() {
               </p>
             </div>
             <div>
-              <h4 className="text-white font-serif text-xl mb-4">Certificates/Associations</h4>
+              <h3 className="text-white font-serif text-xl mb-4">Certificates/Associations</h3>
               <ul className="text-stone-400 leading-relaxed space-y-2">
                 <li>Cornell University PDP. Real Estate Evaluation, Rev Management</li>
                 <li>Court Of Master Sommeliers.</li>
@@ -325,7 +325,7 @@ export default function About() {
               >
                 <h2 className="text-5xl md:text-7xl font-serif text-[#181818] mb-8 leading-tight">
                   Ready to Build Something<br />
-                  <span className="italic text-white">Exceptional?</span>
+                  <span className="italic text-[#181818]">Exceptional?</span>
                 </h2>
                 <p className="text-[#181818] text-lg mb-12 max-w-2xl mx-auto lg:mx-0">
                   Let&apos;s discuss how we can support your hospitality vision

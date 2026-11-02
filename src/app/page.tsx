@@ -6,7 +6,8 @@ import { pageMetadata, SITE_DESCRIPTION } from '@/lib/seo';
 import { SERVICES_DATA } from '@/data/homeData';
 
 export const metadata: Metadata = pageMetadata({
-  title: 'Hospitality Consulting in New York',
+  // Written in full: the root layout's title template skips a page in its own segment.
+  title: 'Hospitality Consulting in New York | GKR Hospitality',
   description: SITE_DESCRIPTION,
   path: '/',
   ogTitle: 'Hospitality Consulting in New York | GKR Hospitality',

@@ -26,7 +26,7 @@ export default function ReviewsPage() {
             </div>
 
             {/* Inquiries */}
-            <div id="contact">
+            <div id="inquiries">
                 <CTASection />
             </div>
         </div>

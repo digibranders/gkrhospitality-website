@@ -44,8 +44,8 @@ export interface AttentionItem {
 }
 
 /* Thresholds for the attention box. Vercel renews certificates itself, so only a near expiry is worth raising. */
-const DOMAIN_WARNING_DAYS = 90;
-const CERTIFICATE_WARNING_DAYS = 14;
+export const DOMAIN_WARNING_DAYS = 90;
+export const CERTIFICATE_WARNING_DAYS = 14;
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
@@ -105,6 +105,13 @@ export function headerFindings(headers: Record<string, string>): HealthReport["h
   return { present, missing };
 }
 
+/** One page's reading. `load` resolves to the HTTP status; a timeout, DNS or TLS error is status 0, so one bad page never stops the run. */
+export async function readPage(path: string, load: () => Promise<number>): Promise<{ path: string; status: number; ms: number }> {
+  const started = performance.now();
+  const status = await load().catch(() => 0);
+  return { path, status, ms: Math.round(performance.now() - started) };
+}
+
 export function summarisePages(results: { path: string; status: number; ms: number }[]): PageSummary {
   const ok = results.filter((r) => r.status === 200);
   const slowest = ok.reduce<{ path: string; ms: number } | null>((max, r) => (!max || r.ms > max.ms ? { path: r.path, ms: r.ms } : max), null);
@@ -135,7 +142,7 @@ export function attentionFromHealth(health: HealthReport, now: Date): AttentionI
   }
   if (daysUntil(health.tls.validTo, now) <= CERTIFICATE_WARNING_DAYS) {
     items.push({
-      title: `Security certificate expires on ${longDate(health.tls.validTo)}`,
+      title: `Security certificate ${daysUntil(health.tls.validTo, now) < 0 ? "expired" : "expires"} on ${longDate(health.tls.validTo)}`,
       detail: "It normally renews itself. We are checking why it has not.",
     });
   }
@@ -143,7 +150,7 @@ export function attentionFromHealth(health: HealthReport, now: Date): AttentionI
     const n = health.pages.failing.length;
     items.push({
       title: `${n} page${n === 1 ? " is" : "s are"} not loading`,
-      detail: `${health.pages.failing.map((p) => `${p.path} (${p.status})`).join(", ")}. We are fixing ${n === 1 ? "it" : "them"}.`,
+      detail: `${health.pages.failing.map((p) => `${p.path} (${p.status === 0 ? "no response" : p.status})`).join(", ")}. We are fixing ${n === 1 ? "it" : "them"}.`,
     });
   }
   const serious = health.audit.critical + health.audit.high;

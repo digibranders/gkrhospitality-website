@@ -1,6 +1,6 @@
 {
   "period": "2026-09",
-  "issued": "2026-09-29",
+  "issued": "2026-10-14",
   "nextReport": "2026-11-05",
   "headline": "Your website is healthy and more secure.",
   "headlineEmphasis": "healthy",
@@ -29,7 +29,7 @@
       ]
     },
     {
-      "value": "4",
+      "value": "5",
       "label": [
         "Security headers",
         "added"
@@ -41,7 +41,7 @@
     {
       "area": "Website health",
       "title": "Every page now indexed on its own",
-      "body": "Every page used to point Google to the homepage. All 10 are now indexed separately."
+      "body": "Every page used to point Google to the homepage. All 10 now appear separately."
     },
     {
       "area": "Code quality",
@@ -61,8 +61,8 @@
   ],
   "operations": {
     "deployments": {
-      "succeeded": 5,
-      "total": 5
+      "succeeded": 6,
+      "total": 6
     },
     "runtimeErrors": {
       "count": 0,
@@ -71,7 +71,6 @@
   },
   "attention": [],
   "nextMonth": [
-    "Add a content security policy to block unwanted scripts",
     "Count contact form enquiries correctly in Google Analytics",
     "Limit how often the contact form can be sent",
     "Improve the mobile menu and colour contrast for accessibility",
