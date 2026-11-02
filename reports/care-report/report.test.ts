@@ -452,7 +452,7 @@ describe("renderReport: page 2", () => {
     expect(html).toContain('<td class="dtable__name">hospitalit…new york</td>');
     expect(html).toContain("&lt;b&gt;gkr&lt;/b&gt; hotels");
     expect(html).toContain('<td class="dtable__name">Home</td><td>900</td><td>31</td><td>10.2</td>');
-    expect(html).toContain("Shown: impressions, the times the site appeared in Google. Position: its average place, 1 being the top.");
+    expect(html).toContain("Seen: how many times the site appeared in Google results. Position: its average place, 1 being the top.");
     expect(html).toContain("the searches listed cover 28 of 57 clicks.");
   });
 
@@ -520,7 +520,7 @@ describe("renderReport: page 2", () => {
     const html = render({ search: { ...testSearch(), performance: null } });
     expect(html).toContain("Search Console has not released August&#39;s impressions and clicks yet.");
     expect(html).toContain('<div class="stat__label">Visitors</div>');
-    expect(html).not.toContain('<div class="stat__label">Impressions</div>');
+    expect(html).not.toContain('<div class="stat__label">Seen in Google</div>');
     expect(html).not.toContain('class="dtable__name"');
   });
 });

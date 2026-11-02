@@ -52,7 +52,7 @@ Needs Node 23.6 or later (it runs the TypeScript directly) and Google Chrome. Se
 
 `npm run report:search` asks Google Search Console for the month and saves:
 
-- **Impressions and clicks** for the whole month, with the change against the previous month ("Up 19% on July").
+- **Seen in Google** (Search Console's "impressions", how often the site appeared in results) and **clicks** for the whole month, with the change against the previous month ("Up 19% on July").
 - **Click rate and average position** for the month, and times shown on desktop and mobile. A share that would round to 0% or 100% without being exactly that reads "under 1%" or "over 99%", here and in the visitor numbers.
 - **What people searched**, top 5 by times shown, with clicks and average position. Google leaves rare searches out for privacy, so the report says how many of the month's clicks the listed searches cover. Long searches are shortened in the middle ("hospitalit…new york") so similar ones stay distinguishable.
 - **Pages Google showed**, top 5. www and non-www addresses for the same page are counted together, and paths are shown by the names in `config.json` (`"/services": "Services"`). A page missing from that list shows as its path; add it to `pageNames` when the site gets a new page.

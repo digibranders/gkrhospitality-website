@@ -946,7 +946,7 @@ function renderGlance(search: SearchReport, analytics: AnalyticsReport, monthNam
     stats.push(
       renderStat(
         perf.totals.impressions,
-        "Impressions",
+        "Seen in Google",
         previous
           ? renderChange(perf.totals.impressions, previous.impressions, previousMonthName)
           : note(`Average position ${perf.totals.position.toFixed(1)}`),
@@ -1025,7 +1025,7 @@ function detailTable(
   return [
     '        <table class="dtable">',
     `          <caption>${escapeHtml(caption)}</caption>`,
-    `          <thead><tr><th scope="col">${escapeHtml(firstColumn)}</th><th scope="col">Shown</th><th scope="col">Clicks</th><th scope="col">Position</th></tr></thead>`,
+    `          <thead><tr><th scope="col">${escapeHtml(firstColumn)}</th><th scope="col">Seen</th><th scope="col">Clicks</th><th scope="col">Position</th></tr></thead>`,
     "          <tbody>",
     ...body,
     "          </tbody>",
@@ -1055,10 +1055,10 @@ function renderSearchDetail(search: SearchReport, config: ReportConfig, period: 
   const railFacts = facts([
     ["Click rate", capitalise(formatShare(perf.totals.clicks, perf.totals.impressions))],
     ["Average position", perf.totals.position.toFixed(1)],
-    ...perf.devices.slice(0, 2).map((d): [string, string] => [`Shown on ${d.device.toLowerCase()}`, numberFormat.format(d.impressions)]),
+    ...perf.devices.slice(0, 2).map((d): [string, string] => [`Seen on ${d.device.toLowerCase()}`, numberFormat.format(d.impressions)]),
   ]);
   // The key sits under the tables, not in the rail, so the rail stays as short as the tables beside it.
-  const key = "Shown: impressions, the times the site appeared in Google. Position: its average place, 1 being the top.";
+  const key = "Seen: how many times the site appeared in Google results. Position: its average place, 1 being the top.";
   const listedClicks = perf.queries.reduce((sum, q) => sum + q.clicks, 0);
   const coverage =
     perf.queries.length > 0 && listedClicks < perf.totals.clicks
