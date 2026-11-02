@@ -1,0 +1,263 @@
+{
+  "source": "Google Search Console",
+  "property": "https://www.gkrhospitality.com/",
+  "period": "2026-10",
+  "fetchedAt": "2026-11-02T04:24:00.029Z",
+  "performance": {
+    "throughDate": "2026-10-31",
+    "totals": {
+      "clicks": 35,
+      "impressions": 182,
+      "position": 12.8
+    },
+    "previousTotals": {
+      "clicks": 28,
+      "impressions": 151,
+      "position": 12.2
+    },
+    "daily": [
+      {
+        "date": "2026-10-01",
+        "clicks": 2,
+        "impressions": 8
+      },
+      {
+        "date": "2026-10-02",
+        "clicks": 2,
+        "impressions": 5
+      },
+      {
+        "date": "2026-10-03",
+        "clicks": 0,
+        "impressions": 5
+      },
+      {
+        "date": "2026-10-04",
+        "clicks": 0,
+        "impressions": 4
+      },
+      {
+        "date": "2026-10-05",
+        "clicks": 0,
+        "impressions": 5
+      },
+      {
+        "date": "2026-10-06",
+        "clicks": 4,
+        "impressions": 11
+      },
+      {
+        "date": "2026-10-07",
+        "clicks": 3,
+        "impressions": 7
+      },
+      {
+        "date": "2026-10-08",
+        "clicks": 0,
+        "impressions": 4
+      },
+      {
+        "date": "2026-10-09",
+        "clicks": 0,
+        "impressions": 6
+      },
+      {
+        "date": "2026-10-10",
+        "clicks": 0,
+        "impressions": 1
+      },
+      {
+        "date": "2026-10-11",
+        "clicks": 0,
+        "impressions": 3
+      },
+      {
+        "date": "2026-10-12",
+        "clicks": 0,
+        "impressions": 4
+      },
+      {
+        "date": "2026-10-13",
+        "clicks": 1,
+        "impressions": 13
+      },
+      {
+        "date": "2026-10-14",
+        "clicks": 0,
+        "impressions": 3
+      },
+      {
+        "date": "2026-10-15",
+        "clicks": 0,
+        "impressions": 2
+      },
+      {
+        "date": "2026-10-16",
+        "clicks": 2,
+        "impressions": 9
+      },
+      {
+        "date": "2026-10-17",
+        "clicks": 0,
+        "impressions": 4
+      },
+      {
+        "date": "2026-10-18",
+        "clicks": 1,
+        "impressions": 5
+      },
+      {
+        "date": "2026-10-19",
+        "clicks": 1,
+        "impressions": 5
+      },
+      {
+        "date": "2026-10-20",
+        "clicks": 3,
+        "impressions": 9
+      },
+      {
+        "date": "2026-10-21",
+        "clicks": 0,
+        "impressions": 4
+      },
+      {
+        "date": "2026-10-22",
+        "clicks": 3,
+        "impressions": 6
+      },
+      {
+        "date": "2026-10-23",
+        "clicks": 3,
+        "impressions": 8
+      },
+      {
+        "date": "2026-10-24",
+        "clicks": 0,
+        "impressions": 9
+      },
+      {
+        "date": "2026-10-25",
+        "clicks": 0,
+        "impressions": 4
+      },
+      {
+        "date": "2026-10-26",
+        "clicks": 1,
+        "impressions": 6
+      },
+      {
+        "date": "2026-10-27",
+        "clicks": 2,
+        "impressions": 8
+      },
+      {
+        "date": "2026-10-28",
+        "clicks": 0,
+        "impressions": 6
+      },
+      {
+        "date": "2026-10-29",
+        "clicks": 0,
+        "impressions": 2
+      },
+      {
+        "date": "2026-10-30",
+        "clicks": 4,
+        "impressions": 9
+      },
+      {
+        "date": "2026-10-31",
+        "clicks": 3,
+        "impressions": 7
+      }
+    ],
+    "queries": [
+      {
+        "query": "gkr hospitality",
+        "clicks": 16,
+        "impressions": 21,
+        "position": 1
+      },
+      {
+        "query": "garrett ronan",
+        "clicks": 4,
+        "impressions": 17,
+        "position": 1.2
+      },
+      {
+        "query": "gkr consulting",
+        "clicks": 0,
+        "impressions": 8,
+        "position": 6.8
+      },
+      {
+        "query": "albany ny restaurant consulting",
+        "clicks": 0,
+        "impressions": 3,
+        "position": 88
+      },
+      {
+        "query": "albany ny restaurant consultant",
+        "clicks": 0,
+        "impressions": 2,
+        "position": 90.5
+      }
+    ],
+    "pages": [
+      {
+        "path": "/about",
+        "clicks": 17,
+        "impressions": 108,
+        "position": 2.5
+      },
+      {
+        "path": "/",
+        "clicks": 16,
+        "impressions": 64,
+        "position": 12.8
+      },
+      {
+        "path": "/work",
+        "clicks": 1,
+        "impressions": 37,
+        "position": 4.6
+      },
+      {
+        "path": "/gallery",
+        "clicks": 1,
+        "impressions": 34,
+        "position": 6.9
+      },
+      {
+        "path": "/contact",
+        "clicks": 0,
+        "impressions": 39,
+        "position": 23.3
+      }
+    ],
+    "devices": [
+      {
+        "device": "Desktop",
+        "clicks": 19,
+        "impressions": 107
+      },
+      {
+        "device": "Mobile",
+        "clicks": 15,
+        "impressions": 71
+      },
+      {
+        "device": "Tablet",
+        "clicks": 1,
+        "impressions": 4
+      }
+    ]
+  },
+  "indexing": {
+    "checkedAt": "2026-11-02T04:24:00.028Z",
+    "pagesChecked": 10,
+    "pagesIndexed": 10,
+    "notIndexed": []
+  }
+}
